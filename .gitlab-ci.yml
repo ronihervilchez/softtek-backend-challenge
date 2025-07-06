@@ -1,0 +1,45 @@
+stages:
+  - deploy
+
+variables:
+  STAGE: "dev"
+  COGNITO_USER_POOL_ID: $COGNITO_USER_POOL_ID_DEV
+
+before_script:
+  - |
+    configure_environment() {
+      case "$1" in
+        "develop")
+          STAGE="dev"
+          ;;
+        "release")
+          STAGE="qa"
+          ;;
+        "staging")
+          STAGE="uat"
+          ;;
+        "main")
+          STAGE="prod"
+          ;;
+        *)
+          echo "Branch not recognized for deployment."
+          exit 1
+      esac
+      export STAGE
+      STAGE_UPPERCASE=$(echo $STAGE | tr 'a-z' 'A-Z')
+      export COGNITO_USER_POOL_ID=$(printenv COGNITO_USER_POOL_ID_${STAGE_UPPERCASE})
+    }
+
+deploy_lambda:
+  stage: deploy
+  image: node:16
+  script:
+    - npm install
+    - configure_environment $CI_COMMIT_REF_NAME
+    - node -e 'require("./src/utils/envs.util.js").updateVpcConfig()'
+    - npx serverless deploy --stage $STAGE
+  only:
+    - main
+    - develop
+    - release
+    - staging

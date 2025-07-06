@@ -1,0 +1,689 @@
+openapi: 3.0.0
+info:
+  title: Softtek Backend Challenge API
+  description: API para el desafío backend de Softtek - Integración con Star Wars API
+  version: 1.0.0
+  contact:
+    name: Softtek Challenge
+    email: developer@softtek.com
+servers:
+  - url: https://api.softtek-challenge.com
+    description: Production API
+  - url: http://localhost:3000
+    description: Local development server
+
+# Esquemas de seguridad
+components:
+  securitySchemes:
+    CognitoAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT obtenido de AWS Cognito
+
+  schemas:
+    # Esquemas de respuesta
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Indica si la operación fue exitosa
+        message:
+          type: string
+          description: Mensaje descriptivo del resultado
+        data:
+          type: object
+          description: Datos de la respuesta
+        errors:
+          type: array
+          items:
+            type: string
+          description: Lista de errores si los hay
+
+    # Esquemas de datos fusionados
+    FusionadosResult:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único del elemento
+        nombre:
+          type: string
+          description: Nombre del elemento
+        categoria:
+          type: string
+          enum: [people, planets, films]
+          description: Categoría del elemento
+        fechaCreacion:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        datosOriginales:
+          type: object
+          description: Datos originales de la API externa
+        metadatos:
+          type: object
+          properties:
+            fuente:
+              type: string
+              description: Fuente de los datos
+            version:
+              type: string
+              description: Versión de la API
+            timestamp:
+              type: string
+              format: date-time
+              description: Timestamp de obtención
+
+    # Esquemas de almacenamiento
+    AlmacenarRequest:
+      type: object
+      required:
+        - categoria
+        - datos
+      properties:
+        categoria:
+          type: string
+          enum: [people, planets, films]
+          description: Categoría de los datos a almacenar
+        datos:
+          type: object
+          description: Datos a almacenar
+        metadatos:
+          type: object
+          description: Metadatos adicionales
+
+    # Esquemas de historial
+    HistorialItem:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único del elemento
+        categoria:
+          type: string
+          description: Categoría del elemento
+        fechaCreacion:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        operacion:
+          type: string
+          enum: [CREATE, UPDATE, DELETE]
+          description: Tipo de operación
+        datos:
+          type: object
+          description: Datos del historial
+
+    # Esquemas de APIs externas
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre de la persona
+        height:
+          type: string
+          description: Altura en centímetros
+        mass:
+          type: string
+          description: Peso en kilogramos
+        hair_color:
+          type: string
+          description: Color del cabello
+        skin_color:
+          type: string
+          description: Color de la piel
+        eye_color:
+          type: string
+          description: Color de los ojos
+        birth_year:
+          type: string
+          description: Año de nacimiento
+        gender:
+          type: string
+          description: Género
+        homeworld:
+          type: string
+          description: Planeta natal
+        films:
+          type: array
+          items:
+            type: string
+          description: Lista de películas
+        species:
+          type: array
+          items:
+            type: string
+          description: Lista de especies
+        vehicles:
+          type: array
+          items:
+            type: string
+          description: Lista de vehículos
+        starships:
+          type: array
+          items:
+            type: string
+          description: Lista de naves espaciales
+        created:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        edited:
+          type: string
+          format: date-time
+          description: Fecha de edición
+        url:
+          type: string
+          description: URL del recurso
+
+    Planet:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre del planeta
+        rotation_period:
+          type: string
+          description: Período de rotación
+        orbital_period:
+          type: string
+          description: Período orbital
+        diameter:
+          type: string
+          description: Diámetro
+        climate:
+          type: string
+          description: Clima
+        gravity:
+          type: string
+          description: Gravedad
+        terrain:
+          type: string
+          description: Terreno
+        surface_water:
+          type: string
+          description: Agua superficial
+        population:
+          type: string
+          description: Población
+        residents:
+          type: array
+          items:
+            type: string
+          description: Lista de residentes
+        films:
+          type: array
+          items:
+            type: string
+          description: Lista de películas
+        created:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        edited:
+          type: string
+          format: date-time
+          description: Fecha de edición
+        url:
+          type: string
+          description: URL del recurso
+
+    Film:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Título de la película
+        episode_id:
+          type: integer
+          description: ID del episodio
+        opening_crawl:
+          type: string
+          description: Texto de apertura
+        director:
+          type: string
+          description: Director
+        producer:
+          type: string
+          description: Productor
+        release_date:
+          type: string
+          format: date
+          description: Fecha de estreno
+        characters:
+          type: array
+          items:
+            type: string
+          description: Lista de personajes
+        planets:
+          type: array
+          items:
+            type: string
+          description: Lista de planetas
+        starships:
+          type: array
+          items:
+            type: string
+          description: Lista de naves espaciales
+        vehicles:
+          type: array
+          items:
+            type: string
+          description: Lista de vehículos
+        species:
+          type: array
+          items:
+            type: string
+          description: Lista de especies
+        created:
+          type: string
+          format: date-time
+          description: Fecha de creación
+        edited:
+          type: string
+          format: date-time
+          description: Fecha de edición
+        url:
+          type: string
+          description: URL del recurso
+
+    # Esquemas de error
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Error en la operación
+        errors:
+          type: array
+          items:
+            type: string
+          example: ["Error específico"]
+
+    # Esquema de health check
+    HealthCheckResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Estado del servicio
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp del health check
+        version:
+          type: string
+          description: Versión de la API
+        environment:
+          type: string
+          description: Entorno de ejecución
+
+# Paths de la API
+paths:
+  /health:
+    get:
+      tags:
+        - Health Check
+      summary: Verificar estado del servicio
+      description: Endpoint público para verificar el estado del servicio
+      responses:
+        '200':
+          description: Servicio operativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+        '500':
+          description: Error en el servicio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /fusionados:
+    get:
+      tags:
+        - Datos Fusionados
+      summary: Obtener datos fusionados
+      description: Obtiene datos fusionados de diferentes fuentes externas
+      security:
+        - CognitoAuth: []
+      parameters:
+        - in: query
+          name: categoria
+          schema:
+            type: string
+            enum: [people, planets, films]
+          description: Filtrar por categoría
+        - in: query
+          name: limite
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Límite de resultados
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Desplazamiento para paginación
+      responses:
+        '200':
+          description: Datos fusionados obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/FusionadosResult'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /almacenar:
+    post:
+      tags:
+        - Almacenamiento
+      summary: Almacenar datos
+      description: Almacena datos en la base de datos
+      security:
+        - CognitoAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlmacenarRequest'
+      responses:
+        '201':
+          description: Datos almacenados exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /historial:
+    get:
+      tags:
+        - Historial
+      summary: Obtener historial
+      description: Obtiene el historial de operaciones
+      security:
+        - CognitoAuth: []
+      parameters:
+        - in: query
+          name: categoria
+          schema:
+            type: string
+            enum: [people, planets, films]
+          description: Filtrar por categoría
+        - in: query
+          name: fechaInicio
+          schema:
+            type: string
+            format: date
+          description: Fecha de inicio para filtrar
+        - in: query
+          name: fechaFin
+          schema:
+            type: string
+            format: date
+          description: Fecha de fin para filtrar
+        - in: query
+          name: limite
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Límite de resultados
+      responses:
+        '200':
+          description: Historial obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/HistorialItem'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /external/people:
+    get:
+      tags:
+        - APIs Externas
+      summary: Obtener personas (con caché)
+      description: Obtiene datos de personas de la API externa de Star Wars con caché de 30 minutos
+      responses:
+        '200':
+          description: Datos de personas obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Person'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /external/people/no-cache:
+    get:
+      tags:
+        - APIs Externas
+      summary: Obtener personas (sin caché)
+      description: Obtiene datos de personas de la API externa de Star Wars sin usar caché
+      responses:
+        '200':
+          description: Datos de personas obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Person'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /external/planets:
+    get:
+      tags:
+        - APIs Externas
+      summary: Obtener planetas (con caché)
+      description: Obtiene datos de planetas de la API externa de Star Wars con caché de 30 minutos
+      responses:
+        '200':
+          description: Datos de planetas obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Planet'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /external/films:
+    get:
+      tags:
+        - APIs Externas
+      summary: Obtener películas (con caché)
+      description: Obtiene datos de películas de la API externa de Star Wars con caché de 30 minutos
+      responses:
+        '200':
+          description: Datos de películas obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Film'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /external/cache:
+    delete:
+      tags:
+        - Gestión de Caché
+      summary: Limpiar todo el caché
+      description: Elimina todos los datos del caché de APIs externas
+      responses:
+        '200':
+          description: Caché limpiado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /external/cache/{endpoint}:
+    delete:
+      tags:
+        - Gestión de Caché
+      summary: Limpiar caché de endpoint específico
+      description: Elimina el caché de un endpoint específico
+      parameters:
+        - in: path
+          name: endpoint
+          required: true
+          schema:
+            type: string
+            enum: [people, planets, films]
+          description: Endpoint del cual limpiar el caché
+      responses:
+        '200':
+          description: Caché del endpoint limpiado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Endpoint inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+# Tags para organizar los endpoints
+tags:
+  - name: Health Check
+    description: Endpoints para verificar el estado del servicio
+  - name: Datos Fusionados
+    description: Endpoints para obtener datos fusionados de múltiples fuentes
+  - name: Almacenamiento
+    description: Endpoints para almacenar datos en la base de datos
+  - name: Historial
+    description: Endpoints para obtener el historial de operaciones
+  - name: APIs Externas
+    description: Endpoints para obtener datos de APIs externas (Star Wars API)
+  - name: Gestión de Caché
+    description: Endpoints para gestionar el caché de APIs externas
+
+# Información adicional
+externalDocs:
+  description: Documentación adicional en GitHub
+  url: https://github.com/softtek/backend-challenge

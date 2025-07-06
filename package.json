@@ -1,0 +1,55 @@
+{
+  "name": "softtek-backend-challenge",
+  "version": "1.0.0",
+  "description": "serverless",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "sls offline",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "prebuild": "npm run clean",
+    "deploy": "npm run build && sls deploy",
+    "deploy:dev": "npm run build && sls deploy --stage dev",
+    "deploy:prod": "npm run build && sls deploy --stage prod",
+    "remove": "sls remove",
+    "remove:dev": "sls remove --stage dev",
+    "remove:prod": "sls remove --stage prod",
+    "logs": "sls logs --tail",
+    "info": "sls info",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "serverless"
+  ],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.450.0",
+    "@aws-sdk/client-dynamodb": "^3.840.0",
+    "@aws-sdk/util-dynamodb": "^3.840.0",
+    "@types/swagger-ui-express": "^4.1.8",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.0",
+    "reflect-metadata": "^0.1.13",
+    "swagger-ui-express": "^5.0.1",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.150",
+    "@types/node": "^20.5.0",
+    "@types/yamljs": "^0.2.34",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.0",
+    "rimraf": "^5.0.5",
+    "serverless": "^3.34.0",
+    "serverless-dotenv-plugin": "^6.0.0",
+    "serverless-esbuild": "^1.23.3",
+    "serverless-offline": "^12.0.4",
+    "typescript": "^5.1.6"
+  }
+}
