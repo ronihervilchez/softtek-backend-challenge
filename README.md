@@ -145,7 +145,7 @@ ResponseBody<never> {
 ### 🔵 GET /historial
 - **Descripción**: Obtiene historial de operaciones ordenado por fecha (más reciente primero)
 - **Método**: GET
-- **Query Parameters**: 
+- **Query Parameters**:
   - `categoria` (opcional): Filtrar por categoría
   - `limit` (opcional): Número de elementos por página (default: 20)
   - `lastEvaluatedKey` (opcional): Token de paginación
@@ -329,6 +329,17 @@ git push origin develop
 # Deploy a producción
 git push origin main
 ```
+
+### Eliminación de Recursos
+```bash
+# Eliminar stack completo
+cdk destroy --profile cdk-crossaccount --force
+
+# Eliminar también CDK bootstrap (opcional)
+aws cloudformation delete-stack --stack-name CDKToolkit --profile cdk-crossaccount
+```
+
+**📖 Para más detalles de deployment y eliminación, consulta [DEPLOYMENT.md](./DEPLOYMENT.md)**
 
 ## 📊 Estado del Proyecto
 
