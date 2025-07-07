@@ -1,5 +1,5 @@
-import { DatabaseRecord } from '../interfaces/database.interface';
-import { IPerson } from '../../../interfaces/fusionado.interface';
+import { DatabaseRecord } from "../interfaces/database.interface";
+import { IPerson } from "../../../interfaces/fusionado.interface";
 
 /**
  * Esquema para datos fusionados
@@ -12,28 +12,27 @@ export interface FusionadosSchema {
 }
 
 /**
- * Esquema para datos almacenados
+ * Esquema para datos almacenados del usuario
  */
-export interface AlmacenadosSchema extends DatabaseRecord {
-  categoria: 'almacenados';
-  datos: {
-    tipo: 'personas' | 'planetas' | 'peliculas' | 'otros';
-    contenido: any;
-    origen: string;
-    version: number;
-  };
+export interface AlmacenadosSchema {
+  usuario: string; // ID
+  fechaCreacion: string;
+  nombres: string;
+  apellidos: string;
+  fechaNacimiento: string;
+  telefono: string;
 }
 
 /**
  * Esquema para historial
  */
 export interface HistorialSchema extends DatabaseRecord {
-  categoria: 'historial';
+  categoria: "historial";
   datos: {
     accion: string;
     descripcion: string;
     parametros: Record<string, any>;
-    resultado: 'exitoso' | 'fallido' | 'pendiente';
+    resultado: "exitoso" | "fallido" | "pendiente";
     duracion?: number;
     error?: string;
   };
@@ -58,44 +57,45 @@ export class SchemaValidators {
   static validateFusionados(data: any): data is FusionadosSchema {
     return (
       data &&
-      typeof data.id === 'string' &&
-      typeof data.fechaCreacion === 'string' &&
+      typeof data.id === "string" &&
+      typeof data.fechaCreacion === "string" &&
       Array.isArray(data.people) &&
-      typeof data.ttl === 'number'
+      typeof data.ttl === "number"
     );
   }
 
   static validateAlmacenados(data: any): data is AlmacenadosSchema {
     return (
       data &&
-      data.categoria === 'almacenados' &&
-      data.datos &&
-      ['personas', 'planetas', 'peliculas', 'otros'].includes(data.datos.tipo) &&
-      data.datos.contenido &&
-      typeof data.datos.origen === 'string' &&
-      typeof data.datos.version === 'number'
+      typeof data.id === "string" &&
+      typeof data.fechaCreacion === "string" &&
+      typeof data.nombres === "string" &&
+      typeof data.apellidos === "string" &&
+      typeof data.fechaNacimiento === "string" &&
+      typeof data.telefono === "string" &&
+      typeof data.usuario === "string"
     );
   }
 
   static validateHistorial(data: any): data is HistorialSchema {
     return (
       data &&
-      data.categoria === 'historial' &&
+      data.categoria === "historial" &&
       data.datos &&
-      typeof data.datos.accion === 'string' &&
-      typeof data.datos.descripcion === 'string' &&
-      typeof data.datos.parametros === 'object' &&
-      ['exitoso', 'fallido', 'pendiente'].includes(data.datos.resultado)
+      typeof data.datos.accion === "string" &&
+      typeof data.datos.descripcion === "string" &&
+      typeof data.datos.parametros === "object" &&
+      ["exitoso", "fallido", "pendiente"].includes(data.datos.resultado)
     );
   }
 
   static validateCache(data: any): data is CacheSchema {
     return (
       data &&
-      typeof data.cacheKey === 'string' &&
-      typeof data.data === 'string' &&
-      typeof data.ttl === 'number' &&
-      typeof data.createdAt === 'number'
+      typeof data.cacheKey === "string" &&
+      typeof data.data === "string" &&
+      typeof data.ttl === "number" &&
+      typeof data.createdAt === "number"
     );
   }
 }
@@ -104,10 +104,7 @@ export class SchemaValidators {
  * Factory para crear registros con esquemas específicos
  */
 export class SchemaFactory {
-  static createFusionados(
-    id: string,
-    people: IPerson[]
-  ): FusionadosSchema {
+  static createFusionados(id: string, people: IPerson[]): FusionadosSchema {
     const ttlSeconds = 30 * 60; // 30 minutos
     return {
       id,
@@ -118,26 +115,19 @@ export class SchemaFactory {
   }
 
   static createAlmacenados(
-    id: string,
-    tipo: 'personas' | 'planetas' | 'peliculas' | 'otros',
-    contenido: any,
-    origen: string,
+    nombres: string,
+    apellidos: string,
+    fechaNacimiento: string,
+    telefono: string,
     usuario: string
   ): AlmacenadosSchema {
     return {
-      id,
-      categoria: 'almacenados',
-      fechaCreacion: new Date().toISOString(),
-      nombre: `${tipo} - ${new Date().toLocaleDateString()}`,
-      datos: {
-        tipo,
-        contenido,
-        origen,
-        version: 1,
-      },
       usuario,
-      procesado: false,
-      timestamp: Date.now(),
+      fechaCreacion: new Date().toISOString(),
+      nombres,
+      apellidos,
+      fechaNacimiento,
+      telefono,
     };
   }
 
@@ -146,13 +136,13 @@ export class SchemaFactory {
     accion: string,
     descripcion: string,
     parametros: Record<string, any>,
-    resultado: 'exitoso' | 'fallido' | 'pendiente',
+    resultado: "exitoso" | "fallido" | "pendiente",
     usuario: string,
     options?: { duracion?: number; error?: string }
   ): HistorialSchema {
     return {
       id,
-      categoria: 'historial',
+      categoria: "historial",
       fechaCreacion: new Date().toISOString(),
       nombre: `${accion} - ${new Date().toLocaleDateString()}`,
       datos: {
