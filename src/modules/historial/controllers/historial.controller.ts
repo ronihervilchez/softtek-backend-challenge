@@ -1,24 +1,22 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { HistorialService, HistorialServiceImpl } from '../services/historial.service';
+import { getHistorialService } from '../../database/services/historial.service';
 import { ResponseUtil } from '../../../utils/response.util';
 
 export class HistorialController {
-  private readonly historialService: HistorialService;
-
-  constructor(historialService?: HistorialService) {
-    this.historialService = historialService || new HistorialServiceImpl();
-  }
+  private readonly historialService = getHistorialService();
 
   async getHistorial(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     try {
       console.log('📋 Obteniendo historial...');
       
-      // Extraer filtros de query parameters si existen
-      const filters = event.queryStringParameters ?? {};
+      // Extraer parámetros de query
+      const queryParams = event.queryStringParameters ?? {};
+      const limit = parseInt(queryParams.limit ?? '10');
+      const lastEvaluatedKey = queryParams.lastKey ? JSON.parse(queryParams.lastKey) : undefined;
       
-      const data = await this.historialService.getHistorial(filters);
+      const data = await this.historialService.getHistorial(limit, lastEvaluatedKey);
       
-      console.log(`✅ Historial obtenido exitosamente: ${data.length} registros`);
+      console.log(`✅ Historial obtenido exitosamente: ${data.histories.length} registros`);
       
       return ResponseUtil.lambdaResponse(200, ResponseUtil.success(data, 'Historial obtenido exitosamente'));
     } catch (error) {

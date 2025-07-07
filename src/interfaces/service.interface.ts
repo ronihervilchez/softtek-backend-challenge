@@ -1,3 +1,5 @@
+import { IPerson } from "./fusionado.interface";
+
 export interface AlmacenarResult {
   id: string;
   mensaje?: string;
@@ -21,12 +23,13 @@ export interface FusionadosResult {
   timestamp: string;
 }
 
-export interface HistorialResult {
-  id: number;
-  accion: string;
-  usuario: string;
-  fecha: string;
-  fechaFormateada: string;
-  detalles: Record<string, any>;
-  procesado: boolean;
+export interface IHistoryList {
+  histories: IHistory[];
+  hasNextPage: boolean;
+}
+
+export interface IHistory {
+  id?: string | number;
+  fechaCreacion?: string;
+  personas: IPerson[];
 }
