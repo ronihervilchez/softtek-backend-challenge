@@ -3,6 +3,7 @@ import {
   AdminCreateUserCommand,
   AdminGetUserCommand,
   AdminSetUserPasswordCommand,
+  AdminUpdateUserAttributesCommand,
   CognitoIdentityProviderClient,
 } from "@aws-sdk/client-cognito-identity-provider";
 
@@ -88,6 +89,34 @@ export class CognitoUserManager {
       return result;
     } catch (error) {
       throw new Error(`Error al obtener usuario: ${error}`);
+    }
+  }
+
+  async updateUserAttributes(
+    email: string,
+    nombres: string,
+    apellidos: string
+  ): Promise<any> {
+    try {
+      const updateUserCommand = new AdminUpdateUserAttributesCommand({
+        UserPoolId: this.userPoolId,
+        Username: email,
+        UserAttributes: [
+          {
+            Name: "name",
+            Value: `${nombres} ${apellidos}`,
+          },
+        ],
+      });
+
+      await this.client.send(updateUserCommand);
+
+      return {
+        success: true,
+        message: "Atributos de usuario actualizados exitosamente",
+      };
+    } catch (error) {
+      throw new Error(`Error al actualizar atributos de usuario: ${error}`);
     }
   }
 }

@@ -1,4 +1,4 @@
-import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, GetItemCommand, PutItemCommand, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
 import { AlmacenarDto, RegistroUsuarioDto } from '../dtos/almacenar.dto';
 import { UsuariosSchema } from '../../database/schemas';
 import { CognitoUserManager } from '../../external-services/cognito-user-manager.service';
@@ -7,6 +7,7 @@ export interface AlmacenarService {
   almacenar(data: AlmacenarDto): Promise<UsuariosSchema>;
   registrarUsuario(data: RegistroUsuarioDto): Promise<{ cognito: any; dynamodb: UsuariosSchema }>;
   saveUsuario(usuarioData: UsuariosSchema): Promise<boolean>;
+  updateUsuario(usuarioData: UsuariosSchema): Promise<boolean>;
   getUsuario(usuario: string): Promise<UsuariosSchema | null>;
 }
 
@@ -70,35 +71,57 @@ export class AlmacenarServiceImpl implements AlmacenarService {
   }
 
   /**
-   * Almacena datos de usuario (función principal del endpoint)
+   * Almacena datos de usuario (solo actualiza usuarios existentes)
    */
   async almacenar(data: AlmacenarDto): Promise<UsuariosSchema> {
     try {
-      console.log('👤 Almacenando datos de usuario...');
+      console.log('👤 Actualizando datos de usuario existente...');
 
-      // Crear el schema de usuario
-      const usuarioData: UsuariosSchema = {
+      // 1. Verificar que el usuario existe
+      const usuarioExistente = await this.getUsuario(data.usuario);
+
+      if (!usuarioExistente) {
+        console.log(`❌ Usuario no encontrado: ${data.usuario}`);
+        throw new Error(`Usuario ${data.usuario} no existe. Use el endpoint de registro para crear nuevos usuarios.`);
+      }
+
+      // 2. Verificar si cambió el nombre o apellidos para sincronizar con Cognito
+      const nombresCambiaron = usuarioExistente.nombres !== data.nombres || usuarioExistente.apellidos !== data.apellidos;
+
+      if (nombresCambiaron) {
+        console.log(`🔄 Sincronizando cambios de nombre/apellidos con Cognito para: ${data.usuario}`);
+        try {
+          await this.cognitoUserManager.updateUserAttributes(data.usuario, data.nombres, data.apellidos);
+          console.log(`✅ Nombre actualizado en Cognito: ${data.nombres} ${data.apellidos}`);
+        } catch (cognitoError) {
+          console.error(`⚠️ Error actualizando Cognito (continuando con DynamoDB):`, cognitoError);
+          // No lanzamos error aquí para que continúe con la actualización de DynamoDB
+        }
+      }
+
+      // 3. Crear el schema actualizado manteniendo la fecha de creación original
+      const usuarioActualizado: UsuariosSchema = {
         usuario: data.usuario,
-        fechaCreacion: new Date().toISOString(),
+        fechaCreacion: usuarioExistente.fechaCreacion, // Mantener fecha original
         nombres: data.nombres,
         apellidos: data.apellidos,
         fechaNacimiento: data.fechaNacimiento,
         telefono: data.telefono,
       };
 
-      // Guardar en la tabla de usuarios
-      const success = await this.saveUsuario(usuarioData);
+      // 4. Actualizar en DynamoDB
+      const success = await this.updateUsuario(usuarioActualizado);
 
       if (success) {
-        console.log(`✅ Usuario guardado exitosamente: ${data.usuario}`);
-        return usuarioData;
+        console.log(`✅ Usuario actualizado exitosamente: ${data.usuario}`);
+        return usuarioActualizado;
       } else {
-        console.log(`❌ Error guardando usuario: ${data.usuario}`);
-        throw new Error('Error al almacenar usuario en la base de datos');
+        console.log(`❌ Error actualizando usuario: ${data.usuario}`);
+        throw new Error('Error al actualizar usuario en la base de datos');
       }
     } catch (error) {
       console.error('❌ Error en el servicio de almacenar:', error);
-      throw new Error(`Error al almacenar usuario: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      throw new Error(`Error al actualizar usuario: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     }
   }
 
@@ -126,6 +149,36 @@ export class AlmacenarServiceImpl implements AlmacenarService {
       return true;
     } catch (error) {
       console.error(`❌ Error guardando usuario:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Actualiza datos de usuario existente en DynamoDB
+   */
+  async updateUsuario(usuarioData: UsuariosSchema): Promise<boolean> {
+    try {
+      const params = {
+        TableName: this.tableName,
+        Key: {
+          usuario: { S: usuarioData.usuario },
+        },
+        UpdateExpression: "SET nombres = :nombres, apellidos = :apellidos, fechaNacimiento = :fechaNacimiento, telefono = :telefono",
+        ExpressionAttributeValues: {
+          ":nombres": { S: usuarioData.nombres },
+          ":apellidos": { S: usuarioData.apellidos },
+          ":fechaNacimiento": { S: usuarioData.fechaNacimiento },
+          ":telefono": { S: usuarioData.telefono },
+        },
+      };
+
+      const command = new UpdateItemCommand(params);
+      await this.dynamoClient.send(command);
+
+      console.log(`🔄 Usuario actualizado: ${usuarioData.usuario}`);
+      return true;
+    } catch (error) {
+      console.error(`❌ Error actualizando usuario:`, error);
       return false;
     }
   }
