@@ -1,17 +1,14 @@
 import { DatabaseRecord } from '../interfaces/database.interface';
+import { IPerson } from '../../../interfaces/fusionado.interface';
 
 /**
  * Esquema para datos fusionados
  */
-export interface FusionadosSchema extends DatabaseRecord {
-  categoria: 'fusionados';
-  datos: {
-    personas: any[];
-    planetas: any[];
-    peliculas: any[];
-    fusionRealizada: string;
-    version: number;
-  };
+export interface FusionadosSchema {
+  id: string; // UUID
+  fechaCreacion: string; // ISO string
+  people: IPerson[]; // Arreglo de personas fusionadas
+  ttl: number; // TTL en segundos Unix timestamp (30 minutos)
 }
 
 /**
@@ -61,13 +58,10 @@ export class SchemaValidators {
   static validateFusionados(data: any): data is FusionadosSchema {
     return (
       data &&
-      data.categoria === 'fusionados' &&
-      data.datos &&
-      Array.isArray(data.datos.personas) &&
-      Array.isArray(data.datos.planetas) &&
-      Array.isArray(data.datos.peliculas) &&
-      typeof data.datos.fusionRealizada === 'string' &&
-      typeof data.datos.version === 'number'
+      typeof data.id === 'string' &&
+      typeof data.fechaCreacion === 'string' &&
+      Array.isArray(data.people) &&
+      typeof data.ttl === 'number'
     );
   }
 
@@ -112,26 +106,14 @@ export class SchemaValidators {
 export class SchemaFactory {
   static createFusionados(
     id: string,
-    personas: any[],
-    planetas: any[],
-    peliculas: any[],
-    usuario: string
+    people: IPerson[]
   ): FusionadosSchema {
+    const ttlSeconds = 30 * 60; // 30 minutos
     return {
       id,
-      categoria: 'fusionados',
       fechaCreacion: new Date().toISOString(),
-      nombre: `Fusión ${new Date().toLocaleDateString()}`,
-      datos: {
-        personas,
-        planetas,
-        peliculas,
-        fusionRealizada: new Date().toISOString(),
-        version: 1,
-      },
-      usuario,
-      procesado: true,
-      timestamp: Date.now(),
+      people,
+      ttl: Math.floor(Date.now() / 1000) + ttlSeconds,
     };
   }
 
