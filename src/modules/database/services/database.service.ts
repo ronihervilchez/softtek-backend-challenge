@@ -1,13 +1,27 @@
-import { DynamoDBClient, PutItemCommand, GetItemCommand, QueryCommand, UpdateItemCommand, DeleteItemCommand, ScanCommand } from '@aws-sdk/client-dynamodb';
-import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
-import { 
-  DynamoDBGetParams, 
-  DynamoDBPutParams, 
-  DynamoDBUpdateParams, 
-  DynamoDBDeleteParams, 
-  DynamoDBQueryParams 
-} from '../../../interfaces/dynamodb.interface';
-import { DatabaseService, DatabaseRecord, DatabaseConfig, QueryOptions, QueryResult } from '../interfaces/database.interface';
+import {
+  DeleteItemCommand,
+  DynamoDBClient,
+  GetItemCommand,
+  PutItemCommand,
+  QueryCommand,
+  ScanCommand,
+  UpdateItemCommand,
+} from "@aws-sdk/client-dynamodb";
+import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
+import {
+  DynamoDBDeleteParams,
+  DynamoDBGetParams,
+  DynamoDBPutParams,
+  DynamoDBQueryParams,
+  DynamoDBUpdateParams,
+} from "../../../interfaces/dynamodb.interface";
+import {
+  DatabaseConfig,
+  DatabaseRecord,
+  DatabaseService,
+  QueryOptions,
+  QueryResult,
+} from "../interfaces/database.interface";
 
 export class DynamoDBService implements DatabaseService {
   private readonly dynamoClient: DynamoDBClient;
@@ -16,10 +30,10 @@ export class DynamoDBService implements DatabaseService {
 
   constructor(config?: Partial<DatabaseConfig>) {
     this.dynamoClient = new DynamoDBClient({
-      region: config?.region ?? process.env.AWS_REGION ?? 'us-east-1',
+      region: config?.region ?? process.env.AWS_REGION ?? "us-east-1",
     });
-    this.tableName = config?.tableName ?? process.env.DYNAMODB_TABLE_DATA ?? 'dev-softtek-data';
-    this.indexName = config?.indexName ?? 'categoria-fecha-index';
+    this.tableName = config?.tableName ?? process.env.DYNAMODB_TABLE_DATA ?? "dev-softtek-data";
+    this.indexName = config?.indexName ?? "categoria-fecha-index";
   }
 
   /**
@@ -37,7 +51,7 @@ export class DynamoDBService implements DatabaseService {
 
       const command = new PutItemCommand(params);
       await this.dynamoClient.send(command);
-      
+
       console.log(`💾 Registro guardado en DynamoDB: ${item.id}`);
       return item;
     } catch (error) {
@@ -80,19 +94,19 @@ export class DynamoDBService implements DatabaseService {
       const params: DynamoDBQueryParams = {
         TableName: this.tableName,
         IndexName: this.indexName,
-        KeyConditionExpression: fecha 
-          ? 'categoria = :categoria AND fechaCreacion = :fecha'
-          : 'categoria = :categoria',
+        KeyConditionExpression: fecha
+          ? "categoria = :categoria AND fechaCreacion = :fecha"
+          : "categoria = :categoria",
         ExpressionAttributeValues: marshall({
-          ':categoria': categoria,
-          ...(fecha && { ':fecha': fecha })
+          ":categoria": categoria,
+          ...(fecha && { ":fecha": fecha }),
         }),
       };
 
       const command = new QueryCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      const records = result.Items?.map(item => unmarshall(item) as DatabaseRecord) ?? [];
+      const records = result.Items?.map((item) => unmarshall(item) as DatabaseRecord) ?? [];
       console.log(`🔍 Query ejecutada en DynamoDB: ${records.length} registros encontrados`);
       return records;
     } catch (error) {
@@ -112,10 +126,11 @@ export class DynamoDBService implements DatabaseService {
       const expressionAttributeValues: Record<string, any> = {};
 
       Object.entries(updates).forEach(([key, value], index) => {
-        if (key !== 'id') { // No actualizar la clave primaria
+        if (key !== "id") {
+          // No actualizar la clave primaria
           const attrName = `#attr${index}`;
           const attrValue = `:val${index}`;
-          
+
           updateExpression.push(`${attrName} = ${attrValue}`);
           expressionAttributeNames[attrName] = key;
           expressionAttributeValues[attrValue] = value;
@@ -125,16 +140,18 @@ export class DynamoDBService implements DatabaseService {
       const params: DynamoDBUpdateParams = {
         TableName: this.tableName,
         Key: marshall({ id }),
-        UpdateExpression: `SET ${updateExpression.join(', ')}`,
+        UpdateExpression: `SET ${updateExpression.join(", ")}`,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: marshall(expressionAttributeValues),
-        ReturnValues: 'ALL_NEW',
+        ReturnValues: "ALL_NEW",
       };
 
       const command = new UpdateItemCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      const updatedRecord = result.Attributes ? unmarshall(result.Attributes) as DatabaseRecord : {} as DatabaseRecord;
+      const updatedRecord = result.Attributes
+        ? (unmarshall(result.Attributes) as DatabaseRecord)
+        : ({} as DatabaseRecord);
       console.log(`🔄 Registro actualizado en DynamoDB: ${id}`);
       return updatedRecord;
     } catch (error) {
@@ -155,7 +172,7 @@ export class DynamoDBService implements DatabaseService {
 
       const command = new DeleteItemCommand(params);
       await this.dynamoClient.send(command);
-      
+
       console.log(`🗑️ Registro eliminado de DynamoDB: ${id}`);
       return true;
     } catch (error) {
@@ -172,9 +189,9 @@ export class DynamoDBService implements DatabaseService {
       const params: DynamoDBQueryParams = {
         TableName: this.tableName,
         IndexName: this.indexName,
-        KeyConditionExpression: 'categoria = :categoria',
+        KeyConditionExpression: "categoria = :categoria",
         ExpressionAttributeValues: marshall({
-          ':categoria': categoria,
+          ":categoria": categoria,
         }),
         ...(limit && { Limit: limit }),
         ScanIndexForward: false, // Ordenar por fecha descendente
@@ -183,7 +200,7 @@ export class DynamoDBService implements DatabaseService {
       const command = new QueryCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      const records = result.Items?.map(item => unmarshall(item) as DatabaseRecord) ?? [];
+      const records = result.Items?.map((item) => unmarshall(item) as DatabaseRecord) ?? [];
       console.log(`📂 Registros por categoría '${categoria}': ${records.length} encontrados`);
       return records;
     } catch (error) {
@@ -199,17 +216,17 @@ export class DynamoDBService implements DatabaseService {
     try {
       const params = {
         TableName: this.tableName,
-        FilterExpression: 'fechaCreacion BETWEEN :startDate AND :endDate',
+        FilterExpression: "fechaCreacion BETWEEN :startDate AND :endDate",
         ExpressionAttributeValues: marshall({
-          ':startDate': startDate,
-          ':endDate': endDate,
+          ":startDate": startDate,
+          ":endDate": endDate,
         }),
       };
 
       const command = new ScanCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      const records = result.Items?.map(item => unmarshall(item) as DatabaseRecord) ?? [];
+      const records = result.Items?.map((item) => unmarshall(item) as DatabaseRecord) ?? [];
       console.log(`📅 Registros por rango de fechas: ${records.length} encontrados`);
       return records;
     } catch (error) {
@@ -225,16 +242,16 @@ export class DynamoDBService implements DatabaseService {
     try {
       const params = {
         TableName: this.tableName,
-        FilterExpression: 'usuario = :usuario',
+        FilterExpression: "usuario = :usuario",
         ExpressionAttributeValues: marshall({
-          ':usuario': usuario,
+          ":usuario": usuario,
         }),
       };
 
       const command = new ScanCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      const records = result.Items?.map(item => unmarshall(item) as DatabaseRecord) ?? [];
+      const records = result.Items?.map((item) => unmarshall(item) as DatabaseRecord) ?? [];
       console.log(`👤 Registros por usuario '${usuario}': ${records.length} encontrados`);
       return records;
     } catch (error) {
@@ -251,11 +268,11 @@ export class DynamoDBService implements DatabaseService {
       const params = {
         TableName: this.tableName,
         IndexName: this.indexName,
-        KeyConditionExpression: 'categoria = :categoria',
+        KeyConditionExpression: "categoria = :categoria",
         ExpressionAttributeValues: marshall({
-          ':categoria': categoria,
+          ":categoria": categoria,
         }),
-        Select: 'COUNT' as const,
+        Select: "COUNT" as const,
       };
 
       const command = new QueryCommand(params);
@@ -284,11 +301,11 @@ export class DynamoDBService implements DatabaseService {
       const command = new ScanCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      const records = result.Items?.map(item => unmarshall(item) as DatabaseRecord) ?? [];
-      
+      const records = result.Items?.map((item) => unmarshall(item) as DatabaseRecord) ?? [];
+
       // Ordenar por timestamp descendente
       records.sort((a, b) => b.timestamp - a.timestamp);
-      
+
       console.log(`⏰ Registros más recientes: ${records.length} encontrados`);
       return records.slice(0, limit);
     } catch (error) {
@@ -300,17 +317,14 @@ export class DynamoDBService implements DatabaseService {
   /**
    * Ejecuta una consulta avanzada con opciones
    */
-  async advancedQuery(
-    categoria: string,
-    options: QueryOptions = {}
-  ): Promise<QueryResult<DatabaseRecord>> {
+  async advancedQuery(categoria: string, options: QueryOptions = {}): Promise<QueryResult<DatabaseRecord>> {
     try {
       const params: DynamoDBQueryParams = {
         TableName: this.tableName,
         IndexName: this.indexName,
-        KeyConditionExpression: 'categoria = :categoria',
+        KeyConditionExpression: "categoria = :categoria",
         ExpressionAttributeValues: marshall({
-          ':categoria': categoria,
+          ":categoria": categoria,
         }),
         ...(options.limit && { Limit: options.limit }),
         ...(options.lastEvaluatedKey && { ExclusiveStartKey: marshall(options.lastEvaluatedKey) }),
@@ -322,8 +336,8 @@ export class DynamoDBService implements DatabaseService {
       const command = new QueryCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      const items = result.Items?.map(item => unmarshall(item) as DatabaseRecord) ?? [];
-      
+      const items = result.Items?.map((item) => unmarshall(item) as DatabaseRecord) ?? [];
+
       return {
         items,
         lastEvaluatedKey: result.LastEvaluatedKey ? unmarshall(result.LastEvaluatedKey) : undefined,

@@ -1,4 +1,4 @@
-import { DynamoDBClient, PutItemCommand, GetItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 
 /**
  * Servicio de cache simplificado usando DynamoDB con TTL de 30 minutos
@@ -10,9 +10,9 @@ export class CacheService {
 
   constructor() {
     this.dynamoClient = new DynamoDBClient({
-      region: process.env.AWS_REGION ?? 'us-east-1',
+      region: process.env.AWS_REGION ?? "us-east-1",
     });
-    this.tableName = process.env.DYNAMODB_TABLE_CACHE ?? 'softtek-cache';
+    this.tableName = process.env.DYNAMODB_TABLE_CACHE ?? "softtek-cache";
   }
 
   /**
@@ -28,8 +28,8 @@ export class CacheService {
           cacheKey: { S: key },
           data: { S: JSON.stringify(data) },
           ttl: { N: ttl.toString() },
-          createdAt: { N: Math.floor(Date.now() / 1000).toString() }
-        }
+          createdAt: { N: Math.floor(Date.now() / 1000).toString() },
+        },
       };
 
       const command = new PutItemCommand(params);
@@ -51,8 +51,8 @@ export class CacheService {
       const params = {
         TableName: this.tableName,
         Key: {
-          cacheKey: { S: key }
-        }
+          cacheKey: { S: key },
+        },
       };
 
       const command = new GetItemCommand(params);
