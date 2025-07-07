@@ -1,5 +1,5 @@
 import { DynamoDBClient, ScanCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { FusionadosSchema } from "../schemas";
+import { CacheSchema } from "../schemas";
 import { IPerson } from "../../../interfaces/fusionado.interface";
 
 /**
@@ -14,18 +14,18 @@ export class CacheService {
     this.dynamoClient = new DynamoDBClient({
       region: process.env.AWS_REGION ?? "us-east-1",
     });
-    // Tabla específica para fusionados que actúa como cache
-    this.tableName = process.env.DYNAMODB_TABLE_DATA ?? "softtek-data";
+    // Tabla específica para cache de datos fusionados
+    this.tableName = process.env.DYNAMODB_TABLE_CACHE ?? "softtek-cache";
   }
 
   /**
-   * Guarda datos fusionados en cache usando el FusionadosSchema
+   * Guarda datos fusionados en cache usando el CacheSchema
    */
   async saveFusionados(id: string, personas: IPerson[]): Promise<boolean> {
     try {
       const ttl = Math.floor(Date.now() / 1000) + this.TTL_SECONDS;
 
-      const fusionadosData: FusionadosSchema = {
+      const cacheData: CacheSchema = {
         id,
         fechaCreacion: new Date().toISOString(),
         personas,
@@ -35,10 +35,10 @@ export class CacheService {
       const params = {
         TableName: this.tableName,
         Item: {
-          id: { S: fusionadosData.id },
-          fechaCreacion: { S: fusionadosData.fechaCreacion },
-          personas: { S: JSON.stringify(fusionadosData.personas) },
-          ttl: { N: fusionadosData.ttl.toString() },
+          id: { S: cacheData.id },
+          fechaCreacion: { S: cacheData.fechaCreacion },
+          personas: { S: JSON.stringify(cacheData.personas) },
+          ttl: { N: cacheData.ttl.toString() },
         },
       };
 
@@ -54,9 +54,9 @@ export class CacheService {
   }
 
   /**
-   * Busca datos fusionados cacheados - retorna FusionadosSchema completo o null
+   * Busca datos fusionados cacheados - retorna CacheSchema completo o null
    */
-  async findFusionados(): Promise<FusionadosSchema | null> {
+  async findFusionados(): Promise<CacheSchema | null> {
     try {
       const params = {
         TableName: this.tableName,
@@ -76,14 +76,14 @@ export class CacheService {
       console.log(`✅ Cache HIT - Datos fusionados encontrados`);
 
       // Si existe el item, todos los campos están presentes (garantizado por save)
-      const fusionadosData: FusionadosSchema = {
+      const cacheData: CacheSchema = {
         id: item.id.S!,
         fechaCreacion: item.fechaCreacion.S!,
         personas: JSON.parse(item.personas.S!) as IPerson[],
         ttl: parseInt(item.ttl.N!),
       };
 
-      return fusionadosData;
+      return cacheData;
     } catch (error) {
       console.error(`❌ Error obteniendo cache fusionados:`, error);
       return null;

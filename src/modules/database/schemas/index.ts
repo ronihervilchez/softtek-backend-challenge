@@ -1,9 +1,9 @@
 import { IPerson } from "../../../interfaces/fusionado.interface";
 
 /**
- * Esquema para datos fusionados
+ * Esquema para cache de datos fusionados
  */
-export interface FusionadosSchema {
+export interface CacheSchema {
   id: string; // UUID
   fechaCreacion: string; // ISO string
   personas: IPerson[]; // Arreglo de personas fusionadas
@@ -13,9 +13,9 @@ export interface FusionadosSchema {
 /**
  * Esquema para datos almacenados del usuario
  */
-export interface AlmacenadosSchema {
-  usuario: string; // ID
-  fechaCreacion: string;
+export interface UsuariosSchema {
+  usuario: string; // ID del usuario
+  fechaCreacion: string; // ISO string
   nombres: string;
   apellidos: string;
   fechaNacimiento: string;
@@ -32,22 +32,10 @@ export interface HistorialSchema {
 }
 
 /**
- * Esquema para cache de APIs externas
- */
-export interface CacheSchema {
-  cacheKey: string;
-  data: string; // JSON stringified
-  ttl: number;
-  createdAt: number;
-  endpoint?: string;
-  parameters?: Record<string, any>;
-}
-
-/**
  * Validadores de esquemas
  */
 export class SchemaValidators {
-  static validateFusionados(data: any): data is FusionadosSchema {
+  static validateCache(data: any): data is CacheSchema {
     return (
       data &&
       typeof data.id === "string" &&
@@ -57,16 +45,15 @@ export class SchemaValidators {
     );
   }
 
-  static validateAlmacenados(data: any): data is AlmacenadosSchema {
+  static validateUsuarios(data: any): data is UsuariosSchema {
     return (
       data &&
-      typeof data.id === "string" &&
+      typeof data.usuario === "string" &&
       typeof data.fechaCreacion === "string" &&
       typeof data.nombres === "string" &&
       typeof data.apellidos === "string" &&
       typeof data.fechaNacimiento === "string" &&
-      typeof data.telefono === "string" &&
-      typeof data.usuario === "string"
+      typeof data.telefono === "string"
     );
   }
 
@@ -78,23 +65,13 @@ export class SchemaValidators {
       Array.isArray(data.personas)
     );
   }
-
-  static validateCache(data: any): data is CacheSchema {
-    return (
-      data &&
-      typeof data.cacheKey === "string" &&
-      typeof data.data === "string" &&
-      typeof data.ttl === "number" &&
-      typeof data.createdAt === "number"
-    );
-  }
 }
 
 /**
  * Factory para crear registros con esquemas específicos
  */
 export class SchemaFactory {
-  static createFusionados(id: string, people: IPerson[]): FusionadosSchema {
+  static createCache(id: string, people: IPerson[]): CacheSchema {
     const ttlSeconds = 30 * 60; // 30 minutos
     return {
       id,
@@ -104,13 +81,13 @@ export class SchemaFactory {
     };
   }
 
-  static createAlmacenados(
+  static createUsuarios(
     nombres: string,
     apellidos: string,
     fechaNacimiento: string,
     telefono: string,
     usuario: string
-  ): AlmacenadosSchema {
+  ): UsuariosSchema {
     return {
       usuario,
       fechaCreacion: new Date().toISOString(),
@@ -121,31 +98,11 @@ export class SchemaFactory {
     };
   }
 
-  static createHistorial(
-    id: string,
-    personas: IPerson[]
-  ): HistorialSchema {
+  static createHistorial(id: string, personas: IPerson[]): HistorialSchema {
     return {
       id,
       fechaCreacion: new Date().toISOString(),
       personas,
-    };
-  }
-
-  static createCache(
-    cacheKey: string,
-    data: any,
-    ttlSeconds: number,
-    endpoint?: string,
-    parameters?: Record<string, any>
-  ): CacheSchema {
-    return {
-      cacheKey,
-      data: JSON.stringify(data),
-      ttl: Math.floor(Date.now() / 1000) + ttlSeconds,
-      createdAt: Math.floor(Date.now() / 1000),
-      endpoint,
-      parameters,
     };
   }
 }

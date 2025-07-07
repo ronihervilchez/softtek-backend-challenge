@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { IPerson } from "../../../interfaces/fusionado.interface";
 import { getCacheService } from "../../database/services/cache.service";
+import { getHistorialService } from "../../database/services/historial.service";
 import { externalApiService } from "../../external-services/external-api.service";
 
 export interface FusionadosService {
@@ -9,6 +10,7 @@ export interface FusionadosService {
 
 export class FusionadosServiceImpl implements FusionadosService {
   private readonly cacheService = getCacheService();
+  private readonly historialService = getHistorialService();
 
   async getFusionados(filters?: Record<string, any>): Promise<IPerson[]> {
     try {
@@ -84,10 +86,17 @@ export class FusionadosServiceImpl implements FusionadosService {
         return fusionedPerson;
       });
 
-      // Guardar en cache con un ID único
-      await this.cacheService.saveFusionados(uuidv4(), fusionedData);
+      // Generar ID único para cache e historial
+      const uniqueId = uuidv4();
+
+      // Guardar en cache (datos temporales con TTL)
+      await this.cacheService.saveFusionados(uniqueId, fusionedData);
+
+      // Guardar en historial (datos persistentes) - solo cuando se obtienen de APIs externas
+      await this.historialService.saveHistorial(uniqueId, fusionedData);
 
       console.log(`✅ Datos fusionados procesados: ${fusionedData.length} personas`);
+      console.log(`💾 Guardado en cache y historial con ID: ${uniqueId}`);
 
       return this.applyFilters(fusionedData, filters);
     } catch (error) {
