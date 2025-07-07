@@ -1,7 +1,9 @@
-import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, ScanCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
+import { FusionadosSchema } from "../schemas";
+import { IPerson } from "../../../interfaces/fusionado.interface";
 
 /**
- * Servicio de cache simplificado usando DynamoDB con TTL de 30 minutos
+ * Servicio de cache para datos fusionados con TTL de 30 minutos
  */
 export class CacheService {
   private readonly dynamoClient: DynamoDBClient;
@@ -12,70 +14,78 @@ export class CacheService {
     this.dynamoClient = new DynamoDBClient({
       region: process.env.AWS_REGION ?? "us-east-1",
     });
-    this.tableName = process.env.DYNAMODB_TABLE_CACHE ?? "softtek-cache";
+    // Tabla específica para fusionados que actúa como cache
+    this.tableName = process.env.DYNAMODB_TABLE_DATA ?? "softtek-data";
   }
 
   /**
-   * Guarda datos en el cache con TTL de 30 minutos
+   * Guarda datos fusionados en cache usando el FusionadosSchema
    */
-  async save<T>(key: string, data: T): Promise<boolean> {
+  async saveFusionados(id: string, personas: IPerson[]): Promise<boolean> {
     try {
       const ttl = Math.floor(Date.now() / 1000) + this.TTL_SECONDS;
+
+      const fusionadosData: FusionadosSchema = {
+        id,
+        fechaCreacion: new Date().toISOString(),
+        personas,
+        ttl,
+      };
 
       const params = {
         TableName: this.tableName,
         Item: {
-          cacheKey: { S: key },
-          data: { S: JSON.stringify(data) },
-          ttl: { N: ttl.toString() },
-          createdAt: { N: Math.floor(Date.now() / 1000).toString() },
+          id: { S: fusionadosData.id },
+          fechaCreacion: { S: fusionadosData.fechaCreacion },
+          personas: { S: JSON.stringify(fusionadosData.personas) },
+          ttl: { N: fusionadosData.ttl.toString() },
         },
       };
 
       const command = new PutItemCommand(params);
       await this.dynamoClient.send(command);
 
-      console.log(`💾 Cache guardado para clave: ${key} (TTL: 30 minutos)`);
+      console.log(`💾 Cache fusionados guardado con ID: ${id} (TTL: 30 minutos)`);
       return true;
     } catch (error) {
-      console.error(`❌ Error guardando cache para clave ${key}:`, error);
+      console.error(`❌ Error guardando cache fusionados:`, error);
       return false;
     }
   }
 
   /**
-   * Busca datos en el cache
+   * Busca datos fusionados cacheados - retorna FusionadosSchema completo o null
    */
-  async find<T>(key: string): Promise<T | null> {
+  async findFusionados(): Promise<FusionadosSchema | null> {
     try {
       const params = {
         TableName: this.tableName,
-        Key: {
-          cacheKey: { S: key },
-        },
       };
 
-      const command = new GetItemCommand(params);
+      const command = new ScanCommand(params);
       const result = await this.dynamoClient.send(command);
 
-      if (!result.Item) {
-        console.log(`� Cache MISS para clave: ${key}`);
+      if (!result?.Items?.length) {
+        console.log(`🔍 Cache MISS - No hay datos fusionados cacheados`);
         return null;
       }
 
-      // Verificar si el TTL ha expirado
-      const ttl = result.Item.ttl?.N ? parseInt(result.Item.ttl.N) : 0;
-      const now = Math.floor(Date.now() / 1000);
+      // Tomar el primer (y único) registro de fusionados
+      const item = result.Items[0];
 
-      if (ttl > 0 && now > ttl) {
-        console.log(`⏰ Cache EXPIRADO para clave: ${key}`);
-        return null;
-      }
+      console.log(`✅ Cache HIT - Datos fusionados encontrados`);
 
-      console.log(`✅ Cache HIT para clave: ${key}`);
-      return result.Item.data?.S ? JSON.parse(result.Item.data.S) : null;
+      // Si existe el item, todos los campos están presentes (garantizado por save)
+      const fusionadosData: FusionadosSchema = {
+        id: item.id.S!,
+        fechaCreacion: item.fechaCreacion.S!,
+        personas: JSON.parse(item.personas.S!) as IPerson[],
+        ttl: parseInt(item.ttl.N!),
+      };
+
+      return fusionadosData;
     } catch (error) {
-      console.error(`❌ Error obteniendo cache para clave ${key}:`, error);
+      console.error(`❌ Error obteniendo cache fusionados:`, error);
       return null;
     }
   }
