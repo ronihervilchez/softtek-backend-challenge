@@ -1,9 +1,9 @@
-import { IsNotEmpty, IsString } from "class-validator";
+import { IsEmail, IsNotEmpty, IsString, MinLength } from "class-validator";
 
-export class AlmacenarDto {
-  @IsString()
+export class RegistroUsuarioDto {
+  @IsEmail()
   @IsNotEmpty()
-  usuario: string;
+  email: string;
 
   @IsString()
   @IsNotEmpty()
@@ -20,4 +20,9 @@ export class AlmacenarDto {
   @IsString()
   @IsNotEmpty()
   telefono: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8)
+  password: string;
 }

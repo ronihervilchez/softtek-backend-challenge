@@ -1,10 +1,10 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { AlmacenarController } from '../modules/almacenar/controllers/almacenar.controller';
+import { UsuarioRegistroController } from '../modules/usuario-registro/controllers/usuario-registro.controller';
 
 // Instancia del controlador
-const almacenarController = new AlmacenarController();
+const usuarioRegistroController = new UsuarioRegistroController();
 
 // Handler específico para registro de usuario
 export const handler = async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
-  return almacenarController.registrarUsuario(event, context);
+  return usuarioRegistroController.registrar(event, context);
 };
