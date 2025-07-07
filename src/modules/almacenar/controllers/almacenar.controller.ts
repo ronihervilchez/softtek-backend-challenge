@@ -30,11 +30,11 @@ export class AlmacenarController {
       }
 
       // Procesar los datos usando el servicio
-      const data = await this.almacenarService.almacenar(validation.dto as AlmacenarDto);
+      const usuarioGuardado = await this.almacenarService.almacenar(validation.dto as AlmacenarDto);
 
-      console.log(`✅ Datos almacenados exitosamente: ${data.id}`);
+      console.log(`✅ Usuario almacenado exitosamente: ${usuarioGuardado.usuario}`);
 
-      return ResponseUtil.lambdaResponse(201, ResponseUtil.success(data, 'Datos almacenados exitosamente'));
+      return ResponseUtil.lambdaResponse(201, ResponseUtil.success(usuarioGuardado, 'Usuario almacenado exitosamente'));
     } catch (error) {
       console.error('❌ Error al almacenar datos:', error);
       return ResponseUtil.lambdaResponse(500, ResponseUtil.error(

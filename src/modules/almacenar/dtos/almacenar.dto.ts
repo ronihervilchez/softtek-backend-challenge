@@ -1,28 +1,23 @@
-import { IsArray, IsNotEmpty, IsObject, IsOptional, IsString } from "class-validator";
+import { IsNotEmpty, IsString } from "class-validator";
 
 export class AlmacenarDto {
   @IsString()
   @IsNotEmpty()
-  nombre: string;
+  usuario: string;
 
   @IsString()
   @IsNotEmpty()
-  descripcion: string;
-
-  @IsOptional()
-  @IsObject()
-  datos?: Record<string, any>;
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
+  nombres: string;
 
   @IsString()
   @IsNotEmpty()
-  categoria: string;
+  apellidos: string;
 
-  @IsOptional()
   @IsString()
-  usuario?: string;
+  @IsNotEmpty()
+  fechaNacimiento: string;
+
+  @IsString()
+  @IsNotEmpty()
+  telefono: string;
 }

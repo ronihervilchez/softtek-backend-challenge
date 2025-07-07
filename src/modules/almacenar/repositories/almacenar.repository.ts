@@ -1,29 +1,40 @@
 import { AlmacenarDto } from '../dtos/almacenar.dto';
-import { AlmacenarResult } from '../../../interfaces';
+import { UsuariosSchema } from '../../database/schemas';
+import { getUsuariosService } from '../../database/services/usuarios.service';
 
 export interface AlmacenarRepository {
-  almacenar(data: AlmacenarDto): Promise<AlmacenarResult>;
+  almacenar(data: AlmacenarDto): Promise<UsuariosSchema>;
 }
 
 export class AlmacenarRepositoryImpl implements AlmacenarRepository {
-  async almacenar(data: AlmacenarDto): Promise<AlmacenarResult> {
-    // Implementar conexión a base de datos
-    // Por ahora simula el almacenamiento
+  private readonly usuariosService = getUsuariosService();
+
+  async almacenar(data: AlmacenarDto): Promise<UsuariosSchema> {
     try {
-      // Aquí irían las consultas de inserción a la base de datos
-      // Ejemplo: const result = await this.db.insert('almacenados', data);
+      console.log('📝 Repositorio - almacenando usuario...');
       
-      const newRecord: AlmacenarResult = {
-        id: Date.now().toString(), // Simulación de ID generado
-        ...data,
-        procesado: true,
-        fechaProcesamiento: new Date().toISOString(),
+      // Crear el schema de usuario
+      const usuarioData: UsuariosSchema = {
+        usuario: data.usuario,
         fechaCreacion: new Date().toISOString(),
+        nombres: data.nombres,
+        apellidos: data.apellidos,
+        fechaNacimiento: data.fechaNacimiento,
+        telefono: data.telefono,
       };
 
-      return newRecord;
+      // Guardar en la tabla de usuarios usando el servicio
+      const success = await this.usuariosService.saveUsuario(usuarioData);
+
+      if (success) {
+        console.log(`✅ Repositorio - Usuario almacenado: ${data.usuario}`);
+        return usuarioData;
+      } else {
+        throw new Error('No se pudo guardar el usuario en la base de datos');
+      }
     } catch (error) {
-      throw new Error(`Error al almacenar datos: ${error}`);
+      console.error(`❌ Error en repositorio almacenar:`, error);
+      throw new Error(`Error al almacenar usuario: ${error}`);
     }
   }
 }
