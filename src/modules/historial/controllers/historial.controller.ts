@@ -1,5 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { getHistorialService } from '../../database/services/historial.service';
+import { getHistorialService } from '../services/historial.service';
 import { ResponseUtil } from '../../../utils/response.util';
 
 export class HistorialController {

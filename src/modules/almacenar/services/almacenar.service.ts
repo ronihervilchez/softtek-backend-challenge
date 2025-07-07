@@ -1,5 +1,5 @@
 import { AlmacenarDto } from '../dtos/almacenar.dto';
-import { getUsuariosService } from '../../database/services/usuarios.service';
+import { getUsuariosService } from './usuarios.service';
 import { UsuariosSchema } from '../../database/schemas';
 
 export interface AlmacenarService {

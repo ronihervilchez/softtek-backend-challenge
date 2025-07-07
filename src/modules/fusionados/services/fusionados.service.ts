@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { IPerson } from "../../../interfaces/fusionado.interface";
 import { getCacheService } from "../../database/services/cache.service";
-import { getHistorialService } from "../../database/services/historial.service";
+import { getHistorialService } from "../../historial/services/historial.service";
 import { externalApiService } from "../../external-services/external-api.service";
 import { IOtherExternalPersonData } from "../../external-services/interfaces";
 

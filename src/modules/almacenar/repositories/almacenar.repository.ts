@@ -1,6 +1,6 @@
 import { AlmacenarDto } from '../dtos/almacenar.dto';
 import { UsuariosSchema } from '../../database/schemas';
-import { getUsuariosService } from '../../database/services/usuarios.service';
+import { getUsuariosService } from '../services/usuarios.service';
 
 export interface AlmacenarRepository {
   almacenar(data: AlmacenarDto): Promise<UsuariosSchema>;

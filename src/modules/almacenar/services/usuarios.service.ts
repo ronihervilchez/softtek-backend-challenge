@@ -1,5 +1,5 @@
 import { DynamoDBClient, GetItemCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { UsuariosSchema } from "../schemas";
+import { UsuariosSchema } from "../../database/schemas";
 
 /**
  * Servicio para manejar datos de usuarios
