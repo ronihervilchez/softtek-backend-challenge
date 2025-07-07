@@ -1,6 +1,6 @@
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { HistorialService, HistorialServiceImpl } from '../services/historial.service';
 import { ResponseUtil } from '../../../utils/response.util';
-import { ApiResponse, HistorialResult } from '../../../interfaces';
 
 export class HistorialController {
   private readonly historialService: HistorialService;
@@ -9,28 +9,32 @@ export class HistorialController {
     this.historialService = historialService || new HistorialServiceImpl();
   }
 
-  async getHistorial(event: any): Promise<ApiResponse<HistorialResult[]>> {
+  async getHistorial(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     try {
+      console.log('📋 Obteniendo historial...');
+      
       // Extraer filtros de query parameters si existen
       const filters = event.queryStringParameters ?? {};
       
       const data = await this.historialService.getHistorial(filters);
       
-      const response = ResponseUtil.success(data, 'Historial obtenido exitosamente');
-      return ResponseUtil.lambdaResponse(200, response);
+      console.log(`✅ Historial obtenido exitosamente: ${data.length} registros`);
+      
+      return ResponseUtil.lambdaResponse(200, ResponseUtil.success(data, 'Historial obtenido exitosamente'));
     } catch (error) {
-      const errorResponse = ResponseUtil.error(
+      console.error('❌ Error al obtener historial:', error);
+      return ResponseUtil.lambdaResponse(500, ResponseUtil.error(
         [error instanceof Error ? error.message : 'Error desconocido'],
         'Error al obtener historial'
-      );
-      return ResponseUtil.lambdaResponse(500, errorResponse);
+      ));
     }
   }
 }
 
-// Función handler unificada para Lambda
+// Instancia del controlador
 const historialController = new HistorialController();
 
-export const handler = async (event: any, context: any): Promise<ApiResponse<HistorialResult[]>> => {
-  return historialController.getHistorial(event);
+// Handler para Lambda
+export const handler = async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
+  return historialController.getHistorial(event, context);
 };

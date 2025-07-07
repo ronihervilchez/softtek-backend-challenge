@@ -1,8 +1,8 @@
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { AlmacenarService, AlmacenarServiceImpl } from '../services/almacenar.service';
 import { AlmacenarDto } from '../dtos/almacenar.dto';
 import { ResponseUtil } from '../../../utils/response.util';
 import { ValidationUtil } from '../../../utils/validation.util';
-import { ApiResponse, AlmacenarResult } from '../../../interfaces';
 
 export class AlmacenarController {
   private readonly almacenarService: AlmacenarService;
@@ -11,8 +11,10 @@ export class AlmacenarController {
     this.almacenarService = almacenarService || new AlmacenarServiceImpl();
   }
 
-  async almacenar(event: any): Promise<ApiResponse<AlmacenarResult>> {
+  async almacenar(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     try {
+      console.log('📥 Iniciando proceso de almacenamiento de datos...');
+
       // Parsear el body de la request
       const body = event.body ? JSON.parse(event.body) : {};
 
@@ -20,31 +22,33 @@ export class AlmacenarController {
       const validation = await ValidationUtil.validateDto(AlmacenarDto, body);
 
       if (!validation.isValid) {
-        const errorResponse = ResponseUtil.error(
+        console.log('❌ Datos de entrada inválidos:', validation.errors);
+        return ResponseUtil.lambdaResponse(400, ResponseUtil.error(
           validation.errors,
           'Datos de entrada inválidos'
-        );
-        return ResponseUtil.lambdaResponse(400, errorResponse);
+        ));
       }
 
       // Procesar los datos usando el servicio
       const data = await this.almacenarService.almacenar(validation.dto as AlmacenarDto);
 
-      const response = ResponseUtil.success(data, 'Datos almacenados exitosamente');
-      return ResponseUtil.lambdaResponse(201, response);
+      console.log(`✅ Datos almacenados exitosamente: ${data.id}`);
+
+      return ResponseUtil.lambdaResponse(201, ResponseUtil.success(data, 'Datos almacenados exitosamente'));
     } catch (error) {
-      const errorResponse = ResponseUtil.error(
+      console.error('❌ Error al almacenar datos:', error);
+      return ResponseUtil.lambdaResponse(500, ResponseUtil.error(
         [error instanceof Error ? error.message : 'Error desconocido'],
         'Error al almacenar datos'
-      );
-      return ResponseUtil.lambdaResponse(500, errorResponse);
+      ));
     }
   }
 }
 
-// Función handler unificada para Lambda
+// Instancia del controlador
 const almacenarController = new AlmacenarController();
 
-export const handler = async (event: any, context: any): Promise<ApiResponse<AlmacenarResult>> => {
-  return almacenarController.almacenar(event);
+// Handler para Lambda
+export const handler = async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
+  return almacenarController.almacenar(event, context);
 };

@@ -14,12 +14,9 @@ La documentación completa de la API está disponible a través de Swagger UI:
 |----------|--------|-------------|---------------|
 | `/health` | GET | Health check del servicio | ❌ No requerida |
 | `/docs` | GET | Documentación Swagger UI | ❌ No requerida |
-| `/fusionados` | GET | Obtener datos fusionados | ✅ Cognito JWT |
-| `/almacenar` | POST | Almacenar datos | ✅ Cognito JWT |
-| `/historial` | GET | Obtener historial | ✅ Cognito JWT |
-| `/external/people` | GET | Obtener personas (con caché) | ❌ No requerida |
-| `/external/planets` | GET | Obtener planetas (con caché) | ❌ No requerida |
-| `/external/films` | GET | Obtener películas (con caché) | ❌ No requerida |
+| `/fusionados` | GET | Obtener datos fusionados con APIs externas | ✅ Cognito JWT |
+| `/almacenar` | POST | Almacenar datos enriquecidos con APIs externas | ✅ Cognito JWT |
+| `/historial` | GET | Obtener historial enriquecido con APIs externas | ✅ Cognito JWT |
 
 ## �🚀 Estructura del Proyecto Reorganizada
 
@@ -73,6 +70,7 @@ src/
 │   └── external-services/     # 🌐 Módulo de servicios externos
 │       ├── external-api.service.ts
 │       ├── database.service.ts
+│       ├── cache.service.ts
 │       ├── auth.service.ts
 │       ├── cognito-auth.service.ts
 │       ├── cognito-user-manager.service.ts
@@ -109,6 +107,9 @@ npm run typecheck
 
 # Construir el proyecto
 npm run build
+
+# Bootstrap CDK (solo primera vez)
+npm run bootstrap
 ```
 
 ### � Ejecutar en modo desarrollo
@@ -267,15 +268,15 @@ Servicio para autenticación:
 
 ## 🚀 Tecnologías Utilizadas
 
-- **⚡ Serverless Framework**: Para deployment y manejo de infraestructura
+- **☁️ AWS CDK**: Infrastructure as Code para gestión de infraestructura
 - **📘 TypeScript**: Tipado estático y mejor desarrollo
 - **✅ class-validator**: Validación robusta de DTOs
 - **🔄 class-transformer**: Transformación de datos
 - **🌩️ AWS Lambda**: Funciones serverless escalables
 - **📦 ESBuild**: Bundling rápido y minificación
-- **🔧 Serverless Offline**: Desarrollo local
-- **🔐 AWS Cognito**: Autenticación y autorización de usuarios
+- ** AWS Cognito**: Autenticación y autorización de usuarios
 - **🌐 API Gateway**: Gestión de APIs REST
+- **🗃️ DynamoDB**: Base de datos NoSQL para almacenamiento y cache
 
 ## 🔧 Variables de Entorno
 

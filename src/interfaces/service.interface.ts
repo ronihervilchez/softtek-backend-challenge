@@ -1,15 +1,17 @@
 export interface AlmacenarResult {
   id: string;
-  nombre: string;
-  descripcion: string;
+  mensaje?: string;
+  nombre?: string;
+  descripcion?: string;
   datos?: Record<string, any>;
   tags?: string[];
-  categoria: string;
+  categoria?: string;
   usuario?: string;
-  procesado: boolean;
-  fechaProcesamiento: string;
-  fechaCreacion: string;
+  procesado?: boolean;
+  fechaProcesamiento?: string;
+  fechaCreacion?: string;
   timestamp?: number;
+  externalDataCount?: number;
 }
 
 export interface FusionadosResult {

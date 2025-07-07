@@ -28,8 +28,9 @@ node_modules/
 .env.prod
 .env.*.local
 
-# Serverless
-.serverless/
+# CDK
+cdk.out/
+.cdk.staging/
 
 # ESBuild cache (debe ignorarse)
 .esbuild/
