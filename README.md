@@ -253,20 +253,38 @@ npm run start
 ## 🔧 Configuración del Proyecto
 
 ### 1. Configurar variables de entorno
-Edita el archivo `.env.dev` con tus configuraciones reales:
+Edita el archivo `.env` con tus configuraciones reales:
 
 ```env
-COGNITO_USER_POOL_ID=us-east-1_XXXXXXXX
+# AWS Configuration
+CDK_DEFAULT_ACCOUNT=828220034556        # Tu AWS Account ID
 AWS_REGION=us-east-1
-STAGE=dev
+
+# DynamoDB Tables
+DYNAMODB_TABLE_CACHE=softtek-cache      # Cache temporal (TTL 30 min)
+DYNAMODB_TABLE_DATA=softtek-data        # Historial persistente
+DYNAMODB_TABLE_USUARIOS=softtek-usuarios # Datos de usuarios
+
+# Cognito (opcional para desarrollo local)
+COGNITO_USER_POOL_ID=                   # Completar después del deploy
+COGNITO_USER_POOL_CLIENT_ID=            # Completar después del deploy
+
+# Environment
 NODE_ENV=development
+STAGE=dev
 ```
 
-**Variables utilizadas en el proyecto:**
-- `COGNITO_USER_POOL_ID`: ID del User Pool de Cognito para autenticación
-- `AWS_REGION`: Región de AWS donde se despliega el proyecto
+**Variables esenciales del proyecto:**
+- `CDK_DEFAULT_ACCOUNT`: Tu AWS Account ID para deployment
+- `AWS_REGION`: Región de AWS donde se despliega
+- `DYNAMODB_TABLE_CACHE`: Tabla para cache temporal con TTL
+- `DYNAMODB_TABLE_DATA`: Tabla para historial persistente
+- `DYNAMODB_TABLE_USUARIOS`: Tabla para datos de usuarios
+- `COGNITO_USER_POOL_ID`: ID del User Pool (solo para testing local)
 - `STAGE`: Ambiente de despliegue (dev/prod)
 - `NODE_ENV`: Modo de Node.js (development/production)
+
+**Nota importante**: Las APIs externas utilizadas (Star Wars API) son públicas y no requieren API keys.
 
 ### 2. Ejecutar en desarrollo
 ```bash
