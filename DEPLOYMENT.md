@@ -250,19 +250,22 @@ SofttekBackendStack.ApiGatewayUrl = https://xxxxxxxxxx.execute-api.us-east-1.ama
 - **softtek-usuarios**: Datos de usuarios
 
 ### ⚡ Lambda Functions
+- **registroFunction**: POST /registro - Registro público de usuarios (Cognito + DynamoDB)
+- **almacenarFunction**: POST /almacenar - Actualización de usuarios existentes + sync Cognito
 - **fusionadosFunction**: GET /fusionados - Fusión de datos con cache
-- **almacenarFunction**: POST /almacenar - Almacenamiento de usuarios
 - **historialFunction**: GET /historial - Consulta de historial paginado
 - **healthFunction**: GET /health - Health check
 
 ### 🌐 API Gateway
-- **REST API** con 4 endpoints
+- **REST API** con 5 endpoints (1 público + 4 protegidos)
 - **CORS** habilitado
+- **Cognito Authorizer** para endpoints protegidos
 - **Integración** con Lambda functions
 
-### 🔐 Cognito (Opcional)
-- **User Pool** para autenticación
-- **Client** configurado
+### 🔐 Cognito User Pool
+- **User Pool** para autenticación de endpoints protegidos
+- **Client** configurado para flujos de autenticación
+- **Grupos de usuarios**: users (por defecto)
 
 ## 🧪 Verificación Post-Deploy
 
@@ -272,33 +275,72 @@ SofttekBackendStack.ApiGatewayUrl = https://xxxxxxxxxx.execute-api.us-east-1.ama
 # Reemplazar con la URL obtenida del deploy
 API_URL="https://xxxxxxxxxx.execute-api.us-east-1.amazonaws.com/dev"
 
-# Health Check
+# 1. Health Check (Público)
 curl $API_URL/health
 
-# Fusionados (datos de Star Wars API)
-curl $API_URL/fusionados
-
-# Almacenar usuario
-curl -X POST $API_URL/almacenar \
+# 2. Registro de Usuario (Público)
+curl -X POST $API_URL/registro \
   -H "Content-Type: application/json" \
   -d '{
-    "usuario": "test123",
+    "email": "test@ejemplo.com",
     "nombres": "Juan",
     "apellidos": "Pérez",
+    "fechaNacimiento": "1990-01-01",
+    "telefono": "+1234567890",
+    "password": "TestPassword123"
+  }'
+
+# 3. Obtener Token de Cognito (para endpoints protegidos)
+# Usar las credenciales del usuario registrado arriba
+aws cognito-idp initiate-auth \
+  --auth-flow USER_PASSWORD_AUTH \
+  --client-id TU_CLIENT_ID \
+  --auth-parameters USERNAME=test@ejemplo.com,PASSWORD=TestPassword123 \
+  --profile cdk-crossaccount
+
+# 4. Actualizar Usuario (Protegido - requiere token)
+curl -X POST $API_URL/almacenar \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer TU_JWT_TOKEN" \
+  -d '{
+    "usuario": "test@ejemplo.com",
+    "nombres": "Juan Carlos",
+    "apellidos": "Pérez López",
     "fechaNacimiento": "1990-01-01",
     "telefono": "+1234567890"
   }'
 
-# Historial
-curl $API_URL/historial
+# 5. Fusionados (Protegido - requiere token)
+curl -H "Authorization: Bearer TU_JWT_TOKEN" $API_URL/fusionados
+
+# 6. Historial (Protegido - requiere token)
+curl -H "Authorization: Bearer TU_JWT_TOKEN" $API_URL/historial
 ```
 
 ### 2. Verificación en AWS Console
 
 - **CloudFormation**: Verificar stack `SofttekBackendStack`
-- **DynamoDB**: Verificar tablas creadas
-- **Lambda**: Verificar functions desplegadas
-- **API Gateway**: Verificar endpoints configurados
+- **DynamoDB**: Verificar tablas creadas (softtek-cache, softtek-data, softtek-usuarios)
+- **Lambda**: Verificar 5 functions desplegadas
+- **API Gateway**: Verificar endpoints configurados con autorización correcta
+- **Cognito**: Verificar User Pool y Client configurados
+
+### 3. Verificación de Funciones Lambda
+
+```bash
+# Listar todas las funciones Lambda del proyecto
+aws lambda list-functions \
+  --profile cdk-crossaccount \
+  --region us-east-1 \
+  --query 'Functions[?starts_with(FunctionName, `softtek-`)].{Name:FunctionName,Runtime:Runtime,Handler:Handler}'
+
+# Verificar funciones específicas:
+# - softtek-registro (Público - registro de usuarios)
+# - softtek-almacenar (Protegido - actualizar usuarios)
+# - softtek-fusionados (Protegido - datos fusionados)
+# - softtek-historial (Protegido - historial)
+# - softtek-health (Público - health check)
+```
 
 ## ⚡ Deployment de Cambios Incrementales (Solo Lambdas)
 

@@ -30,7 +30,7 @@ El proyecto utiliza **tres tablas DynamoDB separadas** para optimizar el rendimi
 
 ```
 src/
-├── handlers/                    # ⚡ Handlers Lambda - Punto de entrada
+├── handlers/                    # ⚡ Handlers Lambda - Punto de entrada genérico
 │   ├── health.ts               # Health check endpoint
 │   └── swagger.ts              # Swagger documentation endpoint
 ├── interfaces/                 # 🔧 Interfaces globales TypeScript
@@ -40,19 +40,27 @@ src/
 │   ├── service.interface.ts
 │   └── index.ts
 ├── modules/                    # 🧩 Módulos organizados por funcionalidad
-│   ├── almacenar/             # 📦 Módulo de almacenamiento de usuarios
+│   ├── almacenar/             # 📦 Módulo de actualización de usuarios existentes
 │   │   ├── controllers/
-│   │   │   ├── almacenar.controller.ts
+│   │   │   ├── almacenar.controller.ts    # Exporta handler + lógica
 │   │   │   └── index.ts
 │   │   ├── dtos/
-│   │   │   ├── almacenar.dto.ts      # Validación con class-validator
+│   │   │   ├── almacenar.dto.ts           # Solo datos de actualización
 │   │   │   └── index.ts
 │   │   ├── repositories/
 │   │   │   ├── almacenar.repository.ts
 │   │   │   └── index.ts
 │   │   ├── services/
-│   │   │   ├── almacenar.service.ts  # Servicio consolidado para usuarios
+│   │   │   ├── almacenar.service.ts       # Solo actualizar usuarios + sync Cognito
 │   │   │   └── index.ts
+│   │   └── index.ts
+│   ├── usuario-registro/      # 🔐 Módulo de registro de nuevos usuarios
+│   │   ├── controllers/
+│   │   │   └── usuario-registro.controller.ts  # Exporta handler + lógica
+│   │   ├── dtos/
+│   │   │   └── registro.dto.ts                  # Email + password + datos
+│   │   ├── services/
+│   │   │   └── usuario-registro.service.ts      # Crear en Cognito + DynamoDB
 │   │   └── index.ts
 │   ├── fusionados/            # 🔗 Módulo de datos fusionados
 │   │   ├── controllers/
@@ -126,25 +134,37 @@ ResponseBody<never> {
 
 ## 🎯 Endpoints Disponibles
 
-### 🟢 GET /fusionados
+### � POST /registro (PÚBLICO)
+- **Descripción**: Registro de nuevos usuarios (Cognito + DynamoDB)
+- **Método**: POST
+- **Autenticación**: ❌ No requerida (público)
+- **Body**: RegistroUsuarioDto (email, nombres, apellidos, fechaNacimiento, telefono, password)
+- **URL Local**: `http://localhost:3000/registro`
+- **Respuesta**: `ResponseBody<{usuario, mensaje, loginInfo}>`
+- **Funcionalidad**: Crea usuario en Cognito (sin email) y guarda en DynamoDB
+
+### 🟡 POST /almacenar (PROTEGIDO)
+- **Descripción**: Actualiza datos de usuarios existentes + sincronización con Cognito
+- **Método**: POST
+- **Autenticación**: ✅ Cognito User Pool (Bearer token)
+- **Body**: AlmacenarDto (usuario, nombres, apellidos, fechaNacimiento, telefono)
+- **URL Local**: `http://localhost:3000/almacenar`
+- **Respuesta**: `ResponseBody<UsuariosSchema>`
+- **Funcionalidad**: Solo actualiza usuarios existentes, sincroniza nombres con Cognito
+
+### 🟢 GET /fusionados (PROTEGIDO)
 - **Descripción**: Obtiene datos fusionados de APIs externas con cache inteligente
 - **Método**: GET
+- **Autenticación**: ✅ Cognito User Pool (Bearer token)
 - **Query Parameters**: Filtros opcionales
 - **URL Local**: `http://localhost:3000/fusionados`
 - **Respuesta**: `ResponseBody<IPerson[]>`
 - **Cache**: Los resultados se cachean por 30 minutos para optimizar rendimiento
 
-### 🟡 POST /almacenar
-- **Descripción**: Almacena datos de usuario con validación robusta
-- **Método**: POST
-- **Body**: AlmacenarDto (validado con class-validator)
-- **URL Local**: `http://localhost:3000/almacenar`
-- **Respuesta**: `ResponseBody<UsuariosSchema>`
-- **Validación**: Campos requeridos: nombre, apellido, telefono
-
-### 🔵 GET /historial
+### 🔵 GET /historial (PROTEGIDO)
 - **Descripción**: Obtiene historial de operaciones ordenado por fecha (más reciente primero)
 - **Método**: GET
+- **Autenticación**: ✅ Cognito User Pool (Bearer token)
 - **Query Parameters**:
   - `categoria` (opcional): Filtrar por categoría
   - `limit` (opcional): Número de elementos por página (default: 20)
@@ -153,12 +173,13 @@ ResponseBody<never> {
 - **Respuesta**: `ResponseBody<IHistoryList>`
 - **Características**: Paginación automática y consultas optimizadas con GSI
 
-### 💚 GET /health
+### 💚 GET /health (PÚBLICO)
 - **Descripción**: Health check del servicio y verificación de conectividad
 - **Método**: GET
+- **Autenticación**: ❌ No requerida (público)
 - **URL Local**: `http://localhost:3000/health`
 - **Respuesta**: `ResponseBody<HealthData>`
-- **Estado**: Siempre disponible, no requiere autenticación
+- **Estado**: Siempre disponible
 
 ## � Documentación de la API
 
@@ -228,7 +249,55 @@ npm run start
 
 3. **Probar endpoints**:
    - **Health Check**: http://localhost:3000/health (sin autenticación)
+   - **Registro**: http://localhost:3000/registro (sin autenticación)  
    - **Endpoints protegidos**: Requieren token JWT de AWS Cognito
+
+## 🧪 Ejemplos de Uso
+
+### 1. **Registro de Usuario (Público)**
+```bash
+curl -X POST http://localhost:3000/registro \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "usuario@ejemplo.com",
+    "nombres": "Juan",
+    "apellidos": "Pérez",
+    "fechaNacimiento": "1990-01-15",
+    "telefono": "+1234567890",
+    "password": "MiPassword123"
+  }'
+```
+
+### 2. **Actualizar Usuario (Protegido)**
+```bash
+curl -X POST http://localhost:3000/almacenar \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer TU_TOKEN_JWT" \
+  -d '{
+    "usuario": "usuario@ejemplo.com",
+    "nombres": "Juan Carlos",
+    "apellidos": "Pérez López", 
+    "fechaNacimiento": "1990-01-15",
+    "telefono": "+1234567890"
+  }'
+```
+
+### 3. **Obtener Datos Fusionados (Protegido)**
+```bash
+curl -X GET "http://localhost:3000/fusionados" \
+  -H "Authorization: Bearer TU_TOKEN_JWT"
+```
+
+### 4. **Consultar Historial (Protegido)**
+```bash
+curl -X GET "http://localhost:3000/historial?categoria=fusionados&limit=10" \
+  -H "Authorization: Bearer TU_TOKEN_JWT"
+```
+
+### 5. **Health Check (Público)**
+```bash
+curl -X GET http://localhost:3000/health
+```
 
 ## 🏗️ Arquitectura del Sistema
 
