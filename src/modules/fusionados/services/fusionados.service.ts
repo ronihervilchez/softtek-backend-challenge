@@ -1,6 +1,7 @@
-import { externalApiService } from "../../external-services/external-api.service";
+import { v4 as uuidv4 } from "uuid";
 import { IPerson } from "../../../interfaces/fusionado.interface";
 import { getCacheService } from "../../database/services/cache.service";
+import { externalApiService } from "../../external-services/external-api.service";
 
 export interface FusionadosService {
   getFusionados(filters?: Record<string, any>): Promise<IPerson[]>;
@@ -8,17 +9,18 @@ export interface FusionadosService {
 
 export class FusionadosServiceImpl implements FusionadosService {
   private readonly cacheService = getCacheService();
-  private readonly CACHE_KEY = 'fusionados:data';
 
   async getFusionados(filters?: Record<string, any>): Promise<IPerson[]> {
     try {
       console.log("🔄 Obteniendo datos fusionados...");
 
       // Verificar si los datos están en cache
-      const cachedData = await this.cacheService.find<IPerson[]>(this.CACHE_KEY);
+      const cachedData = await this.cacheService.findFusionados();
       if (cachedData) {
-        console.log("📋 Datos obtenidos desde cache");
-        return this.applyFilters(cachedData, filters);
+        console.log(
+          `📋 Datos obtenidos desde cache (ID: ${cachedData.id}, creado: ${cachedData.fechaCreacion})`
+        );
+        return this.applyFilters(cachedData.personas, filters);
       }
 
       console.log("🌐 Cache miss - obteniendo datos desde APIs externas...");
@@ -27,7 +29,7 @@ export class FusionadosServiceImpl implements FusionadosService {
       const [peopleList, films, otherPeopleData] = await Promise.all([
         externalApiService.getPeopleList(),
         externalApiService.getFilms(),
-        externalApiService.getOtherPeopleData()
+        externalApiService.getOtherPeopleData(),
       ]);
 
       console.log(
@@ -42,9 +44,7 @@ export class FusionadosServiceImpl implements FusionadosService {
         );
 
         // Obtener las películas en las que aparece
-        const personFilms = films
-          .filter((film) => person.films.includes(film.url))
-          .map((film) => film.title);
+        const personFilms = films.filter((film) => person.films.includes(film.url)).map((film) => film.title);
 
         // Crear el objeto IPerson fusionado
         let masters: string[] = [];
@@ -53,7 +53,7 @@ export class FusionadosServiceImpl implements FusionadosService {
         } else if (otherData?.masters) {
           masters = [otherData.masters];
         }
-          
+
         let apprentices: string[] = [];
         if (Array.isArray(otherData?.apprentices)) {
           apprentices = otherData.apprentices;
@@ -67,27 +67,28 @@ export class FusionadosServiceImpl implements FusionadosService {
           altura: parseInt(person.height) || 0,
           peso: parseInt(person.mass) || 0,
           genero: person.gender,
-          especie: Array.isArray(person.species) && person.species.length > 0 
-            ? person.species[0] 
-            : otherData?.species ?? 'Desconocida',
+          especie:
+            Array.isArray(person.species) && person.species.length > 0
+              ? person.species[0]
+              : otherData?.species ?? "Desconocida",
           died: otherData?.died,
-          planeta: Array.isArray(otherData?.homeworld) 
-            ? otherData.homeworld[0] 
-            : otherData?.homeworld ?? 'Desconocido',
+          planeta: Array.isArray(otherData?.homeworld)
+            ? otherData.homeworld[0]
+            : otherData?.homeworld ?? "Desconocido",
           peliculas: personFilms,
           maestros: masters,
           aprendices: apprentices,
-          imagen: otherData?.image ?? ''
+          imagen: otherData?.image ?? "",
         };
 
         return fusionedPerson;
       });
 
-      // Guardar en cache
-      await this.cacheService.save(this.CACHE_KEY, fusionedData);
+      // Guardar en cache con un ID único
+      await this.cacheService.saveFusionados(uuidv4(), fusionedData);
 
       console.log(`✅ Datos fusionados procesados: ${fusionedData.length} personas`);
-      
+
       return this.applyFilters(fusionedData, filters);
     } catch (error) {
       console.error(`❌ Error en el servicio de fusionados:`, error);
@@ -97,19 +98,19 @@ export class FusionadosServiceImpl implements FusionadosService {
 
   private applyFilters(data: IPerson[], filters?: Record<string, any>): IPerson[] {
     let filteredData = data;
-    
+
     if (filters?.limit) {
       filteredData = data.slice(0, parseInt(filters.limit));
     }
-    
+
     if (filters?.genero) {
-      filteredData = filteredData.filter(person => 
+      filteredData = filteredData.filter((person) =>
         person.genero.toLowerCase().includes(filters.genero.toLowerCase())
       );
     }
-    
+
     if (filters?.especie) {
-      filteredData = filteredData.filter(person => 
+      filteredData = filteredData.filter((person) =>
         person.especie.toLowerCase().includes(filters.especie.toLowerCase())
       );
     }

@@ -19,6 +19,7 @@ export class SofttekBackendStack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Para POC
       pointInTimeRecovery: true,
+      timeToLiveAttribute: 'ttl', // TTL para datos fusionados
     });
 
     // Global Secondary Index para categoría y fecha
