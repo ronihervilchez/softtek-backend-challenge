@@ -12,14 +12,14 @@ export class FusionadosController {
   async getFusionados(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     try {
       console.log('🔄 Iniciando proceso de fusión de datos...');
-      
+
       // Extraer filtros de query parameters si existen
       const filters = event.queryStringParameters ?? {};
-      
+
       const data = await this.fusionadosService.getFusionados(filters);
-      
+
       console.log(`✅ Datos fusionados obtenidos: ${data.length} elementos`);
-      
+
       return ResponseUtil.lambdaResponse(200, ResponseUtil.success(data, 'Datos fusionados obtenidos exitosamente'));
     } catch (error) {
       console.error('❌ Error al obtener datos fusionados:', error);

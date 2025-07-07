@@ -17,7 +17,7 @@ export interface IExternalPerson {
     url:        string;
 }
 
-export interface IPersonDate {
+export interface IOtherExternalPersonData {
     id:                 number;
     name:               string;
     height?:            number;
