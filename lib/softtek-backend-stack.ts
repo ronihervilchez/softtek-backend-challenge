@@ -178,7 +178,7 @@ export class SofttekBackendStack extends cdk.Stack {
       ...commonLambdaProps,
       functionName: "softtek-registro",
       code: lambda.Code.fromAsset("./src"),
-      handler: "handlers/registro.handler",
+      handler: "modules/usuario-registro/controllers/usuario-registro.controller.handler",
       description: "Registro público de usuarios en Cognito y DynamoDB",
     });
 

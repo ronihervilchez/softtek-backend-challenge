@@ -58,7 +58,7 @@ export class UsuarioRegistroController {
 // Instancia del controlador
 const usuarioRegistroController = new UsuarioRegistroController();
 
-// Handler para Lambda
+// Handler para Lambda - Exportado directamente
 export const handler = async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
   return usuarioRegistroController.registrar(event, context);
 };
