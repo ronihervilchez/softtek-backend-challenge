@@ -300,7 +300,218 @@ curl $API_URL/historial
 - **Lambda**: Verificar functions desplegadas
 - **API Gateway**: Verificar endpoints configurados
 
+## ⚡ Deployment de Cambios Incrementales (Solo Lambdas)
+
+### 🔄 Actualizar Solo Código de Lambdas (Recomendado para Desarrollo)
+
+#### 1. Flujo de Desarrollo Iterativo
+
+```bash
+# 1. Hacer cambios en tu código TypeScript
+# Ejemplo: modificar src/modules/fusionados/services/fusionados.service.ts
+
+# 2. Compilar cambios
+npm run build
+
+# 3. Ver qué va a cambiar ANTES del deploy (opcional pero recomendado)
+cdk diff --profile cdk-crossaccount
+
+# 4. Deploy solo los cambios (CDK detecta automáticamente qué cambió)
+cdk deploy --profile cdk-crossaccount --require-approval never
+```
+
+#### 2. CDK Diff - Ver Cambios Antes del Deploy
+
+```bash
+# Ver exactamente qué recursos van a cambiar ANTES del deploy
+cdk diff --profile cdk-crossaccount
+```
+
+**Salida esperada para cambios solo en Lambda:**
+```diff
+Stack SofttekBackendStack
+Resources
+[~] AWS::Lambda::Function fusionadosFunction fusionadosFunction12345678 
+ └─ [~] Code
+     └─ [~] .S3Key:
+         ├─ [-] old-hash-abc123.zip
+         └─ [+] new-hash-def456.zip
+```
+
+#### 3. Hotswap Deploy (Ultra Rápido para Desarrollo)
+
+```bash
+# Deploy rápido que bypassa CloudFormation para cambios de código
+cdk deploy --profile cdk-crossaccount --hotswap
+```
+
+**⚡ Ventajas del hotswap:**
+- ✅ **Súper rápido** (30 segundos vs 2-3 minutos)
+- ✅ **Solo actualiza** código de Lambda directamente
+- ✅ **No modifica** CloudFormation stack
+- ⚠️ **Solo para desarrollo** (no usar en producción)
+
+### 🎯 Cuándo CDK Solo Actualiza Lambdas
+
+CDK **automáticamente detecta** y solo actualiza cuando cambias:
+
+✅ **Código TypeScript** en carpeta `/src`
+✅ **Dependencias** en `package.json`
+✅ **Variables de entorno** de las lambdas
+✅ **Configuración** de memoria/timeout de lambdas
+
+**NO toca estos recursos:**
+- ❌ DynamoDB tables (a menos que cambies esquema)
+- ❌ API Gateway (a menos que cambies endpoints)
+- ❌ IAM roles (a menos que cambies permisos)
+- ❌ Cognito (a menos que cambies configuración)
+
+### � Ejemplos de Cambios Comunes
+
+#### 1. Modificar Lógica de Negocio
+
+```bash
+# Ejemplo: Cambiar lógica en fusionados
+# Editar: src/modules/fusionados/services/fusionados.service.ts
+
+npm run build
+cdk deploy --profile cdk-crossaccount --hotswap
+```
+
+#### 2. Agregar Validaciones
+
+```bash
+# Ejemplo: Nuevas validaciones en almacenar
+# Editar: src/modules/almacenar/dtos/almacenar.dto.ts
+
+npm run build
+cdk deploy --profile cdk-crossaccount --hotswap
+```
+
+#### 3. Cambiar Respuestas de Endpoints
+
+```bash
+# Ejemplo: Modificar estructura de respuesta
+# Editar: src/modules/historial/controllers/historial.controller.ts
+
+npm run build
+cdk deploy --profile cdk-crossaccount --hotswap
+```
+
+### ⚠️ Cuándo NO Usar Hotswap
+
+**Usar deploy normal** (`cdk deploy` sin `--hotswap`) cuando cambias:
+
+- 🏗️ **Infraestructura**: DynamoDB schemas, API Gateway endpoints
+- �🔧 **Variables de entorno del stack**: En lib/softtek-backend-stack.ts
+- 📦 **Recursos nuevos**: Nuevas tablas, endpoints, roles
+- 🔐 **Permisos**: IAM policies, trust relationships
+- ⚙️ **Configuración de Lambda**: Memory, timeout, layers
+
+### 📊 Comparación de Métodos de Deploy
+
+| Comando | Velocidad | Uso Recomendado | CloudFormation | Validación |
+|---------|-----------|-----------------|----------------|------------|
+| `cdk diff` | ⭐⭐⭐ Instantáneo | Verificación | ❌ Solo consulta | ✅ Completa |
+| `cdk deploy --hotswap` | ⭐⭐⭐ Rápido | Desarrollo | ❌ Bypass | ⚠️ Limitada |
+| `cdk deploy` | ⭐⭐ Normal | Producción | ✅ Completa | ✅ Completa |
+
+### 🔧 Flujo Completo de Desarrollo
+
+```bash
+# 1. Desarrollo local
+npm run start  # Probar localmente
+
+# 2. Hacer cambios en código
+# Editar archivos en src/
+
+# 3. Compilar
+npm run build
+
+# 4. Ver cambios
+cdk diff --profile cdk-crossaccount
+
+# 5. Deploy rápido (desarrollo)
+cdk deploy --profile cdk-crossaccount --hotswap
+
+# 6. Probar endpoints
+curl https://tu-api-gateway-url/dev/health
+curl https://tu-api-gateway-url/dev/fusionados
+
+# 7. Deploy completo (antes de merge/producción)
+cdk deploy --profile cdk-crossaccount --require-approval never
+```
+
+### 💡 Tips para Desarrollo Eficiente
+
+#### 1. Watch Mode para TypeScript
+
+```bash
+# Terminal 1: Compilación automática
+npm run build -- --watch
+
+# Terminal 2: Deploy cuando necesites
+cdk deploy --profile cdk-crossaccount --hotswap
+```
+
+#### 2. Script de Deploy Rápido
+
+Crea un script en `package.json`:
+
+```json
+{
+  "scripts": {
+    "deploy:dev": "npm run build && cdk deploy --profile cdk-crossaccount --hotswap",
+    "deploy:prod": "npm run build && cdk deploy --profile cdk-crossaccount --require-approval never"
+  }
+}
+```
+
+```bash
+# Uso
+npm run deploy:dev   # Para desarrollo rápido
+npm run deploy:prod  # Para producción
+```
+
 ## 🔧 Troubleshooting
+
+### Errores de Deploy Incremental
+
+#### 1. "Resource is in UPDATE_IN_PROGRESS"
+
+```bash
+# Verificar estado del stack
+aws cloudformation describe-stacks \
+  --stack-name SofttekBackendStack \
+  --profile cdk-crossaccount \
+  --query 'Stacks[0].StackStatus'
+
+# Si está stuck, cancelar update
+aws cloudformation cancel-update-stack \
+  --stack-name SofttekBackendStack \
+  --profile cdk-crossaccount
+```
+
+#### 2. "Code package too large"
+
+```bash
+# Optimizar bundle
+npm run build
+
+# Ver tamaño
+ls -la cdk.out/*.zip
+
+# Si es muy grande, revisar dependencias
+npm ls --depth=0
+```
+
+#### 3. Rollback Rápido
+
+```bash
+# Si algo sale mal, volver al estado anterior
+aws lambda get-function --function-name softtek-fusionados --profile cdk-crossaccount
+# Ver versiones anteriores y hacer rollback si es necesario
+```
 
 ### Errores Comunes
 

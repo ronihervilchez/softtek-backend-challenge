@@ -2,6 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { Construct } from "constructs";
 
@@ -173,13 +174,33 @@ export class SofttekBackendStack extends cdk.Stack {
       description: "Obtener historial con integración externa",
     });
 
+    const registroFunction = new lambda.Function(this, "RegistroFunction", {
+      ...commonLambdaProps,
+      functionName: "softtek-registro",
+      code: lambda.Code.fromAsset("./src"),
+      handler: "handlers/registro.handler",
+      description: "Registro público de usuarios en Cognito y DynamoDB",
+    });
+
     // Dar permisos de DynamoDB a las funciones
-    const functionsNeedingDynamoDB = [fusionadosFunction, almacenarFunction, historialFunction];
+    const functionsNeedingDynamoDB = [fusionadosFunction, almacenarFunction, historialFunction, registroFunction];
     functionsNeedingDynamoDB.forEach((func) => {
       cacheTable.grantReadWriteData(func); // Cache temporal
       dataTable.grantReadWriteData(func); // Historial de datos fusionados
       usuariosTable.grantReadWriteData(func); // Datos de usuarios
     });
+
+    // Dar permisos de Cognito a la función de registro
+    registroFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        "cognito-idp:AdminCreateUser",
+        "cognito-idp:AdminSetUserPassword",
+        "cognito-idp:AdminAddUserToGroup",
+        "cognito-idp:AdminGetUser"
+      ],
+      resources: [userPool.userPoolArn]
+    }));
 
     // API Gateway
     const api = new apigateway.RestApi(this, "SofttekApi", {
@@ -213,12 +234,16 @@ export class SofttekBackendStack extends cdk.Stack {
     // Endpoints públicos (sin autenticación)
     const healthIntegration = new apigateway.LambdaIntegration(healthFunction);
     const swaggerIntegration = new apigateway.LambdaIntegration(swaggerFunction);
+    const registroIntegration = new apigateway.LambdaIntegration(registroFunction);
 
     api.root.addResource("health").addMethod("GET", healthIntegration);
 
     const docsResource = api.root.addResource("docs");
     docsResource.addMethod("GET", swaggerIntegration);
     docsResource.addResource("{proxy+}").addMethod("GET", swaggerIntegration);
+
+    // Endpoint público para registro de usuarios
+    api.root.addResource("registro").addMethod("POST", registroIntegration);
 
     // Endpoints protegidos (con autenticación Cognito)
     const fusionadosIntegration = new apigateway.LambdaIntegration(fusionadosFunction);
