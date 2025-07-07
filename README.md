@@ -1,44 +1,57 @@
 # 🎯 Softtek Backend Challenge
 
-## � Documentación de la API
+Este proyecto es un backend serverless desarrollado con AWS CDK, TypeScript y Lambda que proporciona una API REST para gestión de usuarios, datos fusionados e historial. Utiliza DynamoDB como base de datos y sigue una arquitectura modular escalable.
 
-### 🔗 Swagger UI
-La documentación completa de la API está disponible a través de Swagger UI:
+## 🚀 Arquitectura del Proyecto
 
-- **Local**: http://localhost:3000/docs
-- **Producción**: https://your-api-id.execute-api.us-east-1.amazonaws.com/docs
+### 📊 Tablas DynamoDB
 
-### 📋 Endpoints Principales
+El proyecto utiliza **tres tablas DynamoDB separadas** para optimizar el rendimiento y la organización:
 
-| Endpoint | Método | Descripción | Autenticación |
-|----------|--------|-------------|---------------|
-| `/health` | GET | Health check del servicio | ❌ No requerida |
-| `/docs` | GET | Documentación Swagger UI | ❌ No requerida |
-| `/fusionados` | GET | Obtener datos fusionados con APIs externas | ✅ Cognito JWT |
-| `/almacenar` | POST | Almacenar datos enriquecidos con APIs externas | ✅ Cognito JWT |
-| `/historial` | GET | Obtener historial enriquecido con APIs externas | ✅ Cognito JWT |
+#### 1. **softtek-cache** (Cache Temporal)
+- **Propósito**: Cache de datos fusionados con TTL de 30 minutos
+- **Partition Key**: `id` (string)
+- **TTL**: Configurado para eliminar automáticamente registros expirados
+- **Uso**: Almacena temporalmente resultados de fusionados para evitar llamadas repetidas a APIs externas
 
-## �🚀 Estructura del Proyecto Reorganizada
+#### 2. **softtek-data** (Historial Persistente)
+- **Propósito**: Historial permanente de datos fusionados
+- **Partition Key**: `id` (string)
+- **GSI**: `categoria-fecha-index` para consultas ordenadas por fecha
+- **Sort Key GSI**: `fechaCreacion` (descendente)
+- **Uso**: Almacena historial de todas las operaciones de fusionados
 
-El proyecto ha sido reorganizado siguiendo una **arquitectura modular** que separa cada funcionalidad en módulos independientes.
+#### 3. **softtek-usuarios** (Datos de Usuarios)
+- **Propósito**: Información de usuarios almacenada
+- **Partition Key**: `usuario` (string)
+- **Uso**: Almacena datos personales de usuarios (nombres, apellidos, teléfono, etc.)
 
-### 📁 Nueva Estructura por Módulos
+### 📁 Estructura Modular del Proyecto
 
 ```
 src/
+├── handlers/                    # ⚡ Handlers Lambda - Punto de entrada
+│   ├── health.ts               # Health check endpoint
+│   └── swagger.ts              # Swagger documentation endpoint
+├── interfaces/                 # 🔧 Interfaces globales TypeScript
+│   ├── dynamodb.interface.ts
+│   ├── fusionado.interface.ts
+│   ├── response.interface.ts    # ResponseBody<T> estándar
+│   ├── service.interface.ts
+│   └── index.ts
 ├── modules/                    # 🧩 Módulos organizados por funcionalidad
-│   ├── almacenar/             # 📦 Módulo de almacenamiento
+│   ├── almacenar/             # 📦 Módulo de almacenamiento de usuarios
 │   │   ├── controllers/
 │   │   │   ├── almacenar.controller.ts
 │   │   │   └── index.ts
 │   │   ├── dtos/
-│   │   │   ├── almacenar.dto.ts
+│   │   │   ├── almacenar.dto.ts      # Validación con class-validator
 │   │   │   └── index.ts
 │   │   ├── repositories/
 │   │   │   ├── almacenar.repository.ts
 │   │   │   └── index.ts
 │   │   ├── services/
-│   │   │   ├── almacenar.service.ts
+│   │   │   ├── almacenar.service.ts  # Servicio consolidado para usuarios
 │   │   │   └── index.ts
 │   │   └── index.ts
 │   ├── fusionados/            # 🔗 Módulo de datos fusionados
@@ -46,53 +59,130 @@ src/
 │   │   │   ├── fusionados.controller.ts
 │   │   │   └── index.ts
 │   │   ├── dtos/
-│   │   │   └── index.ts       # Preparado para futuros DTOs
+│   │   │   └── index.ts
 │   │   ├── repositories/
 │   │   │   ├── fusionados.repository.ts
 │   │   │   └── index.ts
 │   │   ├── services/
-│   │   │   ├── fusionados.service.ts
+│   │   │   ├── fusionados.service.ts # Cache + Historial + APIs externas
 │   │   │   └── index.ts
 │   │   └── index.ts
 │   ├── historial/             # 📋 Módulo de historial
 │   │   ├── controllers/
 │   │   │   ├── historial.controller.ts
 │   │   │   └── index.ts
-│   │   ├── dtos/
-│   │   │   └── index.ts       # Preparado para futuros DTOs
-│   │   ├── repositories/
-│   │   │   ├── historial.repository.ts
-│   │   │   └── index.ts
 │   │   ├── services/
-│   │   │   ├── historial.service.ts
+│   │   │   ├── historial.service.ts  # DynamoDB historial con paginación
 │   │   │   └── index.ts
 │   │   └── index.ts
-│   └── external-services/     # 🌐 Módulo de servicios externos
-│       ├── external-api.service.ts
-│       ├── database.service.ts
-│       ├── cache.service.ts
+│   ├── database/              # 🗄️ Servicios generales de base de datos
+│   │   ├── interfaces/
+│   │   │   └── database.interface.ts
+│   │   ├── schemas/
+│   │   │   └── index.ts             # CacheSchema, HistorialSchema, UsuariosSchema
+│   │   ├── services/
+│   │   │   ├── cache.service.ts     # Servicio de cache (fusionados)
+│   │   │   ├── database.service.ts  # Servicio base DynamoDB
+│   │   │   └── index.ts
+│   │   └── index.ts
+│   └── external-services/     # 🌐 Servicios externos
 │       ├── auth.service.ts
+│       ├── cache.service.ts
 │       ├── cognito-auth.service.ts
 │       ├── cognito-user-manager.service.ts
+│       ├── database.service.ts
+│       ├── external-api.service.ts  # APIs de Star Wars, Personas, etc.
+│       ├── interfaces/
+│       │   ├── people.interface.ts
+│       │   └── response.interface.ts
 │       └── index.ts
-├── handlers/                  # ⚡ Handlers Lambda - Punto de entrada
-│   ├── fusionados.ts
-│   ├── almacenar.ts
-│   ├── historial.ts
-│   └── health.ts
 └── utils/                     # 🛠️ Utilidades compartidas
-    ├── response.util.ts
-    └── validation.util.ts
+    ├── response.util.ts       # ResponseBody<T> helpers
+    └── validation.util.ts     # Validación con class-validator
 ```
 
+### 🔧 Patrón de Respuestas Estándar
+
+Todos los endpoints siguen el patrón `ResponseBody<T>` para consistencia:
+
+```typescript
+// Respuesta exitosa
+ResponseBody<T> {
+  success: true,
+  data: T,              // Tipo específico del endpoint
+  message: string,
+  timestamp: string
+}
+
+// Respuesta de error
+ResponseBody<never> {
+  success: false,
+  message: string,
+  errors?: string[],
+  timestamp: string
+  // data ausente en errores
+}
+```
+
+## 🎯 Endpoints Disponibles
+
+### 🟢 GET /fusionados
+- **Descripción**: Obtiene datos fusionados de APIs externas con cache inteligente
+- **Método**: GET
+- **Query Parameters**: Filtros opcionales
+- **URL Local**: `http://localhost:3000/fusionados`
+- **Respuesta**: `ResponseBody<IPerson[]>`
+- **Cache**: Los resultados se cachean por 30 minutos para optimizar rendimiento
+
+### 🟡 POST /almacenar
+- **Descripción**: Almacena datos de usuario con validación robusta
+- **Método**: POST
+- **Body**: AlmacenarDto (validado con class-validator)
+- **URL Local**: `http://localhost:3000/almacenar`
+- **Respuesta**: `ResponseBody<UsuariosSchema>`
+- **Validación**: Campos requeridos: nombre, apellido, telefono
+
+### 🔵 GET /historial
+- **Descripción**: Obtiene historial de operaciones ordenado por fecha (más reciente primero)
+- **Método**: GET
+- **Query Parameters**: 
+  - `categoria` (opcional): Filtrar por categoría
+  - `limit` (opcional): Número de elementos por página (default: 20)
+  - `lastEvaluatedKey` (opcional): Token de paginación
+- **URL Local**: `http://localhost:3000/historial`
+- **Respuesta**: `ResponseBody<IHistoryList>`
+- **Características**: Paginación automática y consultas optimizadas con GSI
+
+### 💚 GET /health
+- **Descripción**: Health check del servicio y verificación de conectividad
+- **Método**: GET
+- **URL Local**: `http://localhost:3000/health`
+- **Respuesta**: `ResponseBody<HealthData>`
+- **Estado**: Siempre disponible, no requiere autenticación
+
+## � Documentación de la API
+
+### � Swagger UI
+La documentación completa de la API está disponible a través de Swagger UI:
+
+- **Local**: http://localhost:3000/docs
+- **Producción**: https://your-api-id.execute-api.us-east-1.amazonaws.com/docs
+
+### 🔐 Autenticación
+Los endpoints protegidos requieren autenticación mediante AWS Cognito:
+
+```bash
+# Ejemplo de header de autorización
+Authorization: Bearer <JWT_TOKEN>
+```
 ## 🚀 Inicio Rápido
 
 ### 📋 Prerrequisitos
 - Node.js 20.x o superior
-- npm 9.x o superior  
+- npm 9.x o superior
 - AWS CLI configurado (para deployment)
 
-### 🔧 Instalación
+### � Instalación
 
 ```bash
 # Clonar el repositorio
@@ -115,6 +205,7 @@ npm run bootstrap
 ### � Ejecutar en modo desarrollo
 
 ```bash
+
 # Iniciar servidor local
 npm run start
 
@@ -139,41 +230,12 @@ npm run start
    - **Health Check**: http://localhost:3000/health (sin autenticación)
    - **Endpoints protegidos**: Requieren token JWT de AWS Cognito
 
-### 🔐 Autenticación
+## 🏗️ Arquitectura del Sistema
 
-Los endpoints protegidos requieren autenticación mediante AWS Cognito:
-
-```bash
-# Ejemplo de header de autorización
-Authorization: Bearer <JWT_TOKEN>
-```
-
-## �🎯 Endpoints Disponibles
-
-### 🟢 GET /fusionados
-- **Descripción**: Obtiene datos fusionados con procesamiento
-- **Método**: GET
-- **Query Parameters**: Filtros opcionales
-- **URL Local**: `http://localhost:3000/fusionados`
-
-### 🟡 POST /almacenar
-- **Descripción**: Almacena nuevos datos con validación
-- **Método**: POST
-- **Body**: AlmacenarDto (validado con class-validator)
-- **URL Local**: `http://localhost:3000/almacenar`
-
-### 🔵 GET /historial
-- **Descripción**: Obtiene historial ordenado por fecha
-- **Método**: GET
-- **Query Parameters**: Filtros opcionales
-- **URL Local**: `http://localhost:3000/historial`
-
-## 🏗️ Arquitectura Modular
-
-### ✅ Ventajas de esta estructura:
+### ✅ Ventajas de la arquitectura modular:
 
 1. **🎯 Separación de responsabilidades**: Cada módulo maneja una funcionalidad específica
-2. **📈 Escalabilidad**: Fácil agregar nuevos módulos sin afectar los existentes
+2. **� Escalabilidad**: Fácil agregar nuevos módulos sin afectar los existentes
 3. **🔧 Mantenibilidad**: Código organizado y fácil de mantener
 4. **🧪 Testabilidad**: Cada módulo puede ser probado independientemente
 5. **♻️ Reutilización**: Servicios externos pueden ser reutilizados por múltiples módulos
@@ -188,14 +250,9 @@ Authorization: Bearer <JWT_TOKEN>
 6. **🌐 External Services**: Encapsula llamadas a APIs externas
 7. **🛠️ Utils**: Utilidades compartidas entre módulos
 
-## 📦 Instalación y Ejecución
+## 🔧 Configuración del Proyecto
 
-### 1. Instalar dependencias
-```bash
-npm install
-```
-
-### 2. Configurar variables de entorno
+### 1. Configurar variables de entorno
 Edita el archivo `.env.dev` con tus configuraciones reales:
 
 ```env
@@ -211,60 +268,12 @@ NODE_ENV=development
 - `STAGE`: Ambiente de despliegue (dev/prod)
 - `NODE_ENV`: Modo de Node.js (development/production)
 
-**Nota**: Se han eliminado las variables no utilizadas en el código para simplificar la configuración.
-
-### 3. Ejecutar en desarrollo
+### 2. Ejecutar en desarrollo
 ```bash
 npm run start
 ```
 
 El servidor estará disponible en: `http://localhost:3000`
-
-## 🔧 Servicios Externos Disponibles
-
-### 🌐 ExternalApiService
-Servicio genérico para llamadas HTTP a APIs externas:
-- `get(url, headers?)`
-- `post(url, data, headers?)`
-- `put(url, data, headers?)`
-- `delete(url, headers?)`
-
-### � DatabaseService
-Servicio para operaciones de base de datos:
-- `query(sql, params?)`
-- `insert(table, data)`
-- `update(table, data, where)`
-- `delete(table, where)`
-
-### � AuthService
-Servicio para autenticación:
-- `validateToken(token)`
-- `getUserInfo(userId)`
-
-## 📝 Ejemplo de DTO (AlmacenarDto)
-
-```typescript
-{
-  "nombre": "string (requerido)",
-  "descripcion": "string (requerido)",
-  "datos": "object (opcional)",
-  "tags": "string[] (opcional)",
-  "categoria": "string (requerido)",
-  "usuario": "string (opcional)"
-}
-```
-
-## 🔄 Estructura de Respuesta Estándar
-
-```typescript
-{
-  "success": boolean,
-  "data": any,
-  "message": string,
-  "errors": string[],
-  "timestamp": string
-}
-```
 
 ## 🚀 Tecnologías Utilizadas
 
@@ -274,53 +283,9 @@ Servicio para autenticación:
 - **🔄 class-transformer**: Transformación de datos
 - **🌩️ AWS Lambda**: Funciones serverless escalables
 - **📦 ESBuild**: Bundling rápido y minificación
-- ** AWS Cognito**: Autenticación y autorización de usuarios
+- **🔐 AWS Cognito**: Autenticación y autorización de usuarios
 - **🌐 API Gateway**: Gestión de APIs REST
 - **🗃️ DynamoDB**: Base de datos NoSQL para almacenamiento y cache
-
-## 🔧 Variables de Entorno
-
-### Variables Utilizadas en el Proyecto
-
-| Variable | Descripción | Ejemplo |
-|----------|-------------|---------|
-| `COGNITO_USER_POOL_ID` | ID del User Pool de Cognito | `us-east-1_XXXXXXXX` |
-| `AWS_REGION` | Región de AWS | `us-east-1` |
-| `STAGE` | Ambiente de despliegue | `dev` / `prod` |
-| `NODE_ENV` | Modo de Node.js | `development` / `production` |
-
-### Configuración por Ambiente
-
-**Desarrollo (`.env.dev`):**
-```env
-COGNITO_USER_POOL_ID=us-east-1_XXXXXXXX
-AWS_REGION=us-east-1
-STAGE=dev
-NODE_ENV=development
-```
-
-**Producción (`.env.prod`):**
-```env
-COGNITO_USER_POOL_ID=us-east-1_YYYYYYYY
-AWS_REGION=us-east-1
-STAGE=prod
-NODE_ENV=production
-```
-
-### Configuración en GitHub Actions
-
-Para el CI/CD, configura los siguientes secrets en tu repositorio:
-
-**AWS Credentials:**
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
-
-**Desarrollo:**
-- `DEV_COGNITO_USER_POOL_ID`
-
-**Producción:**
-- `PROD_COGNITO_USER_POOL_ID`
 
 ## 🚀 Deployment
 
@@ -350,31 +315,26 @@ git push origin main
 ## 📊 Estado del Proyecto
 
 ✅ **Completado:**
-- **Arquitectura modular implementada con estructura de carpetas organizada**
-- **Tres endpoints funcionales**
-- **Validación con class-validator**
-- **Servicios externos configurados**
-- **Documentación actualizada**
-- **Desarrollo local funcionando**
-- **Variables de entorno optimizadas y limpiadas (solo las realmente utilizadas)**
-- **Configuración de GitHub Actions actualizada**
-- **Autenticación con Cognito configurada**
-- **Estructura de carpetas organizada por tipo (controllers, services, repositories, dtos)**
-- **Archivos index.ts para importaciones simplificadas**
+- **Arquitectura modular con tres DynamoDB tables separadas** (cache, historial, usuarios)
+- **Servicios consolidados y organizados por funcionalidad**
+- **Cuatro endpoints funcionales con validación robusta**
+- **Cache inteligente con TTL de 30 minutos para optimizar rendimiento**
+- **Historial con paginación y consultas optimizadas usando GSI**
+- **Validación completa con class-validator**
+- **Documentación Swagger automática**
+- **Respuestas estandarizadas con ResponseBody<T>**
+- **Desarrollo local funcionando correctamente**
+- **Configuración de deployment automático con GitHub Actions**
+- **Autenticación y autorización con AWS Cognito**
+- **Type safety completo con TypeScript**
 
-🔧 **Próximos pasos:**
-- Conectar base de datos real
-- Agregar tests unitarios
-- Configurar monitoreo y logging
+🔧 **Características técnicas:**
+- **O(1) lookups** en operaciones de fusionados usando Maps
+- **Schemas tipados** para cada tabla DynamoDB
+- **Error handling** robusto y consistente
+- **Modular architecture** escalable y mantenible
+- **Clean code** siguiendo principios SOLID
 
 ---
 
-🎉 **¡Proyecto con arquitectura modular optimizada y estructura de carpetas organizada!**
----
-
-Para más información sobre la configuración y deployment, consulta:
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura del proyecto
-- [COGNITO_SETUP.md](./COGNITO_SETUP.md) - Configuración de Cognito
-- [GITHUB_ACTIONS_SETUP.md](./GITHUB_ACTIONS_SETUP.md) - Configuración de CI/CD
-- [ENV_CLEANUP_REPORT.md](./ENV_CLEANUP_REPORT.md) - Reporte de limpieza de variables
-- [MODULE_STRUCTURE_REPORT.md](./MODULE_STRUCTURE_REPORT.md) - Reporte de estructura de módulos
+🎉 **¡Proyecto con arquitectura serverless escalable y moderna!**
