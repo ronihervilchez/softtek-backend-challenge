@@ -1,13 +1,13 @@
 import { AlmacenarDto } from '../dtos/almacenar.dto';
 import { UsuariosSchema } from '../../database/schemas';
-import { getUsuariosService } from '../services/usuarios.service';
+import { getAlmacenarService } from '../services/almacenar.service';
 
 export interface AlmacenarRepository {
   almacenar(data: AlmacenarDto): Promise<UsuariosSchema>;
 }
 
 export class AlmacenarRepositoryImpl implements AlmacenarRepository {
-  private readonly usuariosService = getUsuariosService();
+  private readonly almacenarService = getAlmacenarService();
 
   async almacenar(data: AlmacenarDto): Promise<UsuariosSchema> {
     try {
@@ -23,8 +23,8 @@ export class AlmacenarRepositoryImpl implements AlmacenarRepository {
         telefono: data.telefono,
       };
 
-      // Guardar en la tabla de usuarios usando el servicio
-      const success = await this.usuariosService.saveUsuario(usuarioData);
+      // Guardar en la tabla de usuarios usando el servicio consolidado
+      const success = await this.almacenarService.saveUsuario(usuarioData);
 
       if (success) {
         console.log(`✅ Repositorio - Usuario almacenado: ${data.usuario}`);
