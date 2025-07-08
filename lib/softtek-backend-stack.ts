@@ -4,6 +4,7 @@ import * as cognito from "aws-cdk-lib/aws-cognito";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction, OutputFormat } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
 
 export class SofttekBackendStack extends cdk.Stack {
@@ -110,7 +111,17 @@ export class SofttekBackendStack extends cdk.Stack {
     // Configuración común para todas las Lambdas
     const commonLambdaProps = {
       runtime: lambda.Runtime.NODEJS_20_X,
-      // Removido layers - las dependencias están incluidas en dist-complete
+      bundling: {
+        minify: true,
+        sourceMap: false,
+        target: "es2022",
+        format: OutputFormat.CJS,
+        externalModules: [
+          // AWS SDK v3 está disponible en el runtime de Lambda
+          '@aws-sdk/*'
+        ],
+        forceDockerBundling: false, // Usar bundling local sin Docker
+      },
       environment: {
         DYNAMODB_TABLE_CACHE: cacheTable.tableName, // softtek-cache
         DYNAMODB_TABLE_DATA: dataTable.tableName, // softtek-data
@@ -126,60 +137,53 @@ export class SofttekBackendStack extends cdk.Stack {
     };
 
     // Lambda Functions
-    const healthFunction = new lambda.Function(this, "HealthFunction", {
+    const healthFunction = new NodejsFunction(this, "HealthFunction", {
       ...commonLambdaProps,
       functionName: "softtek-health",
-      code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "handlers/health.handler",
+      entry: "./src/handlers/health.ts",
       description: "Health check endpoint",
     });
 
-    const swaggerFunction = new lambda.Function(this, "SwaggerFunction", {
+    const swaggerFunction = new NodejsFunction(this, "SwaggerFunction", {
       ...commonLambdaProps,
       functionName: "softtek-swagger",
-      code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "handlers/swagger.handler",
+      entry: "./src/handlers/swagger.ts",
       description: "Swagger UI documentation endpoint",
     });
 
     // Funciones principales
-    const fusionadosFunction = new lambda.Function(this, "FusionadosFunction", {
+    const fusionadosFunction = new NodejsFunction(this, "FusionadosFunction", {
       ...commonLambdaProps,
       functionName: "softtek-fusionados",
-      code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "handlers/fusionados.handler",
+      entry: "./src/handlers/fusionados.ts",
       description: "Obtener datos fusionados con APIs externas",
     });
 
-    const almacenarFunction = new lambda.Function(this, "AlmacenarFunction", {
+    const almacenarFunction = new NodejsFunction(this, "AlmacenarFunction", {
       ...commonLambdaProps,
       functionName: "softtek-almacenar",
-      code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "handlers/almacenar.handler",
+      entry: "./src/handlers/almacenar.ts",
       description: "Almacenar datos con integración externa",
     });
 
-    const historialFunction = new lambda.Function(this, "HistorialFunction", {
+    const historialFunction = new NodejsFunction(this, "HistorialFunction", {
       ...commonLambdaProps,
       functionName: "softtek-historial",
-      code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "handlers/historial.handler",
+      entry: "./src/handlers/historial.ts",
       description: "Obtener historial con integración externa",
     });
 
-    const registroFunction = new lambda.Function(this, "RegistroFunction", {
+    const registroFunction = new NodejsFunction(this, "RegistroFunction", {
       ...commonLambdaProps,
       functionName: "softtek-registro",
-      code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "handlers/usuario-registro.handler",
+      entry: "./src/handlers/usuario-registro.ts",
       description: "Registro público de usuarios en Cognito y DynamoDB",
     });
 
-    const loginFunction = new lambda.Function(this, "LoginFunction", {
+    const loginFunction = new NodejsFunction(this, "LoginFunction", {
       ...commonLambdaProps,
       functionName: "softtek-login",
-      code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "handlers/usuario-login.handler",
+      entry: "./src/handlers/usuario-login.ts",
       description: "Login público de usuarios para obtener JWT token",
     });
 
