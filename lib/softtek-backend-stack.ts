@@ -147,7 +147,7 @@ export class SofttekBackendStack extends cdk.Stack {
       ...commonLambdaProps,
       functionName: "softtek-fusionados",
       code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "modules/fusionados/controllers/fusionados.controller.handler",
+      handler: "handlers/fusionados.handler",
       description: "Obtener datos fusionados con APIs externas",
     });
 
@@ -155,7 +155,7 @@ export class SofttekBackendStack extends cdk.Stack {
       ...commonLambdaProps,
       functionName: "softtek-almacenar",
       code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "modules/almacenar/controllers/almacenar.controller.handler",
+      handler: "handlers/almacenar.handler",
       description: "Almacenar datos con integración externa",
     });
 
@@ -163,7 +163,7 @@ export class SofttekBackendStack extends cdk.Stack {
       ...commonLambdaProps,
       functionName: "softtek-historial",
       code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "modules/historial/controllers/historial.controller.handler",
+      handler: "handlers/historial.handler",
       description: "Obtener historial con integración externa",
     });
 
@@ -171,7 +171,7 @@ export class SofttekBackendStack extends cdk.Stack {
       ...commonLambdaProps,
       functionName: "softtek-registro",
       code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "modules/usuario-registro/controllers/usuario-registro.controller.handler",
+      handler: "handlers/usuario-registro.handler",
       description: "Registro público de usuarios en Cognito y DynamoDB",
     });
 
@@ -179,7 +179,7 @@ export class SofttekBackendStack extends cdk.Stack {
       ...commonLambdaProps,
       functionName: "softtek-login",
       code: lambda.Code.fromAsset("./dist-complete"),
-      handler: "modules/usuario-login/controllers/usuario-login.controller.handler",
+      handler: "handlers/usuario-login.handler",
       description: "Login público de usuarios para obtener JWT token",
     });
 
