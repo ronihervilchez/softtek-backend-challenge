@@ -10,7 +10,8 @@ export const handler = async (
   context: Context
 ): Promise<APIGatewayAuthorizerResult> => {
   console.log("🔐 Lambda Authorizer ejecutándose...");
-  console.log("📋 Event:", JSON.stringify(event, null, 2));
+  console.log("📋 Method ARN:", event.methodArn);
+  console.log("🎟️ Authorization Token:", event.authorizationToken ? "Presente" : "Ausente");
 
   const authorizerService = new CognitoAuthorizerService();
 
@@ -28,15 +29,19 @@ export const handler = async (
 
     console.log("✅ Token válido para usuario:", authResult.username);
 
-    // Generar policy de acceso permitido
-    const policy = generatePolicy(authResult.username, "Allow", event.methodArn, authResult.claims);
+    // Generar policy de acceso permitido para toda la API (usando wildcard)
+    const apiArn = event.methodArn.split('/').slice(0, 2).join('/') + '/*';
+    console.log("🔓 Generando policy para ARN:", apiArn);
+    
+    const policy = generatePolicy(authResult.username, "Allow", apiArn, authResult.claims);
 
     return policy;
   } catch (error) {
     console.error("❌ Error en autorización:", error);
 
-    // Generar policy de acceso denegado
-    const policy = generatePolicy("user", "Deny", event.methodArn);
+    // Generar policy de acceso denegado para toda la API
+    const apiArn = event.methodArn.split('/').slice(0, 2).join('/') + '/*';
+    const policy = generatePolicy("user", "Deny", apiArn);
     return policy;
   }
 };
@@ -50,6 +55,8 @@ function generatePolicy(
   resource: string,
   context?: any
 ): APIGatewayAuthorizerResult {
+  console.log(`📋 Generando policy: ${effect} para resource: ${resource}`);
+  
   const policy: APIGatewayAuthorizerResult = {
     principalId,
     policyDocument: {
@@ -62,7 +69,9 @@ function generatePolicy(
         },
       ],
     },
-  }; // Agregar contexto del usuario para que esté disponible en las Lambdas
+  };
+
+  // Agregar contexto del usuario para que esté disponible en las Lambdas
   if (context && effect === "Allow") {
     policy.context = {
       email: context.email ?? "",
@@ -71,7 +80,11 @@ function generatePolicy(
       givenName: context.given_name ?? "",
       // Agregar cualquier otro claim que necesites
     };
+    
+    console.log("👤 Contexto de usuario agregado a la policy");
   }
 
+  console.log("📄 Policy generada:", JSON.stringify(policy, null, 2));
+  
   return policy;
 }

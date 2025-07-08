@@ -246,7 +246,7 @@ export class SofttekBackendStack extends cdk.Stack {
       handler: authorizerFunction,
       identitySource: apigateway.IdentitySource.header("Authorization"),
       authorizerName: "LambdaAuthorizer",
-      resultsCacheTtl: cdk.Duration.minutes(5),
+      resultsCacheTtl: cdk.Duration.seconds(0), // Desactivar cache para debugging
     });
 
     // API Gateway
