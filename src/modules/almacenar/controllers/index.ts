@@ -1,1 +1,1 @@
-export * from './almacenar.controller';
+export * from "./almacenar.controller";

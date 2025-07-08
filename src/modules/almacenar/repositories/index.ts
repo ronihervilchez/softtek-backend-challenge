@@ -1,1 +1,1 @@
-export * from './almacenar.repository';
+export * from "./almacenar.repository";

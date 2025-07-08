@@ -1,1 +1,1 @@
-export * from './almacenar.service';
+export * from "./almacenar.service";

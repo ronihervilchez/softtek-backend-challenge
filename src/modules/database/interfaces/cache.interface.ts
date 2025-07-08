@@ -12,7 +12,7 @@ export interface CacheConfig {
   region: string;
 }
 
-export interface CacheService {
+export interface ICacheService {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<boolean>;
   delete(key: string): Promise<boolean>;

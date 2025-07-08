@@ -1,3 +1,3 @@
-export * from './controllers/fusionados.controller';
-export * from './services/fusionados.service';
-export * from './repositories/fusionados.repository';
+export * from "./controllers";
+export * from "./repositories";
+export * from "./services";
