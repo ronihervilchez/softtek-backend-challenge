@@ -13,12 +13,19 @@ export class FusionadosController {
     try {
       console.log('🔄 Iniciando proceso de fusión de datos...');
 
+      // Extraer información del usuario autenticado desde Lambda Authorizer
+      const userInfo = event.requestContext.authorizer;
+      const userEmail = userInfo?.email ?? 'unknown';
+      const userName = userInfo?.username ?? 'unknown';
+
+      console.log(`👤 Usuario autenticado: ${userName} (${userEmail})`);
+
       // Extraer filtros de query parameters si existen
       const filters = event.queryStringParameters ?? {};
 
       const data = await this.fusionadosService.getFusionados(filters);
 
-      console.log(`✅ Datos fusionados obtenidos: ${data.length} elementos`);
+      console.log(`✅ Datos fusionados obtenidos: ${data.length} elementos para usuario ${userEmail}`);
 
       return ResponseUtil.lambdaResponse(200, ResponseUtil.success(data, 'Datos fusionados obtenidos exitosamente'));
     } catch (error) {

@@ -201,6 +201,15 @@ export class SofttekBackendStack extends cdk.Stack {
       description: "Login público de usuarios para obtener JWT token",
     });
 
+    // Lambda Authorizer personalizado
+    const authorizerFunction = new NodejsFunction(this, "AuthorizerFunction", {
+      ...commonLambdaProps,
+      functionName: "softtek-authorizer",
+      entry: "./src/handlers/cognito-authorizer.ts",
+      description: "Lambda Authorizer personalizado para validar tokens de Cognito",
+      timeout: cdk.Duration.seconds(30), // Timeout más corto para authorizer
+    });
+
     // Dar permisos de DynamoDB a las funciones
     const functionsNeedingDynamoDB = [fusionadosFunction, almacenarFunction, historialFunction, registroFunction];
     functionsNeedingDynamoDB.forEach((func) => {
@@ -232,11 +241,11 @@ export class SofttekBackendStack extends cdk.Stack {
     // Agregar variable de entorno del UserPoolClient a la función de login
     loginFunction.addEnvironment('COGNITO_USER_POOL_CLIENT_ID', userPoolClient.userPoolClientId);
 
-    // Cognito Authorizer
-    const auth = new apigateway.CognitoUserPoolsAuthorizer(this, "CognitoAuthorizer", {
-      cognitoUserPools: [userPool],
-      authorizerName: "CognitoAuthorizer",
-      identitySource: "method.request.header.Authorization",
+    // Lambda Authorizer personalizado (reemplaza CognitoUserPoolsAuthorizer)
+    const auth = new apigateway.TokenAuthorizer(this, "LambdaAuthorizer", {
+      handler: authorizerFunction,
+      identitySource: apigateway.IdentitySource.header('Authorization'),
+      authorizerName: "LambdaAuthorizer",
       resultsCacheTtl: cdk.Duration.minutes(5),
     });
 
@@ -287,17 +296,17 @@ export class SofttekBackendStack extends cdk.Stack {
 
     api.root.addResource("fusionados").addMethod("GET", fusionadosIntegration, {
       authorizer: auth,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
     api.root.addResource("almacenar").addMethod("POST", almacenarIntegration, {
       authorizer: auth,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
     api.root.addResource("historial").addMethod("GET", historialIntegration, {
       authorizer: auth,
-      authorizationType: apigateway.AuthorizationType.COGNITO,
+      authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
     // Outputs

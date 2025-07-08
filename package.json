@@ -40,6 +40,7 @@
     "@aws-sdk/lib-dynamodb": "^3.840.0",
     "@aws-sdk/util-dynamodb": "^3.840.0",
     "@types/swagger-ui-express": "^4.1.8",
+    "aws-jwt-verify": "^5.1.0",
     "axios": "^1.10.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
