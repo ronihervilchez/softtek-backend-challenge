@@ -1,7 +1,7 @@
-import { DynamoDBClient, PutItemCommand, QueryCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient, PutItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { IPerson } from "../../../interfaces/fusionado.interface";
+import { IHistory, IHistoryList } from "../../../interfaces/service.interface";
 import { HistorialSchema } from "../../database/schemas/database.schemas";
-import { IHistoryList, IHistory } from "../../../interfaces/service.interface";
 
 /**
  * Servicio para manejar el historial de datos fusionados
@@ -34,7 +34,6 @@ export class HistorialService {
           id: { S: historialData.id },
           fechaCreacion: { S: historialData.fechaCreacion },
           personas: { S: JSON.stringify(historialData.personas) },
-          categoria: { S: 'historial' }, // Agregar categoría para usar el GSI
         },
       };
 
@@ -50,7 +49,7 @@ export class HistorialService {
   }
 
   /**
-   * Obtiene el historial de datos fusionados con paginación
+   * Obtiene el historial de datos fusionados con paginación usando Scan
    * @param limit - Número máximo de elementos a retornar
    * @param lastEvaluatedKey - Clave del último elemento evaluado (para paginación)
    * @returns Lista de historial con información de paginación
@@ -59,13 +58,7 @@ export class HistorialService {
     try {
       const params: any = {
         TableName: this.tableName,
-        IndexName: 'categoria-fecha-index',
-        KeyConditionExpression: 'categoria = :categoria',
-        ExpressionAttributeValues: {
-          ':categoria': { S: 'historial' }
-        },
         Limit: limit,
-        ScanIndexForward: false, // Ordenar por fecha descendente (más recientes primero)
       };
 
       // Si hay una clave de evaluación previa, agregarla para paginación
@@ -73,7 +66,7 @@ export class HistorialService {
         params.ExclusiveStartKey = lastEvaluatedKey;
       }
 
-      const command = new QueryCommand(params);
+      const command = new ScanCommand(params);
       const result = await this.dynamoClient.send(command);
 
       if (!result?.Items?.length) {
@@ -84,12 +77,12 @@ export class HistorialService {
         };
       }
 
-      // Convertir los items de DynamoDB a formato IHistory
-      const histories: IHistory[] = result.Items.map(item => ({
-        id: item.id?.S,
-        fechaCreacion: item.fechaCreacion?.S,
-        personas: JSON.parse(item.personas?.S ?? '[]') as IPerson[],
-      }));
+      // Convertir los items de DynamoDB a formato IHistory y ordenar por fecha descendente
+      const histories: IHistory[] = result.Items.map((item) => ({
+        id: item.id?.S ?? "",
+        fechaCreacion: item.fechaCreacion?.S ?? "",
+        personas: JSON.parse(item.personas?.S ?? "[]") as IPerson[],
+      })).sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
 
       const hasNextPage = !!result.LastEvaluatedKey;
 

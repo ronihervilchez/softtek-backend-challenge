@@ -1,7 +1,7 @@
-import { DynamoDBClient, ScanCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { CacheSchema } from "../schemas/database.schemas";
+import { DynamoDBClient, PutItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import { IPerson } from "../../../interfaces/fusionado.interface";
 import { ICacheService } from "../interfaces/cache.interface";
+import { CacheSchema } from "../schemas/database.schemas";
 
 /**
  * Servicio de cache para datos fusionados con TTL de 30 minutos
@@ -55,7 +55,8 @@ export class CacheService implements ICacheService {
   }
 
   /**
-   * Busca datos fusionados cacheados - retorna CacheSchema completo o null
+   * Busca datos fusionados cacheados - obtiene el más reciente y valida TTL
+   * Usa Scan para obtener todos los elementos y luego ordena por fechaCreacion para garantizar el más reciente
    */
   async findFusionados(): Promise<CacheSchema | null> {
     try {
@@ -71,17 +72,35 @@ export class CacheService implements ICacheService {
         return null;
       }
 
-      // Tomar el primer (y único) registro de fusionados
-      const item = result.Items[0];
+      // Ordenar por fechaCreacion descendente para obtener el más reciente
+      const items = [...result.Items];
+      items.sort((a, b) => {
+        const dateA = new Date(a.fechaCreacion.S ?? "").getTime();
+        const dateB = new Date(b.fechaCreacion.S ?? "").getTime();
+        return dateB - dateA; // Descendente: más reciente primero
+      });
 
-      console.log(`✅ Cache HIT - Datos fusionados encontrados`);
+      const mostRecentItem = items[0];
+      const ttl = parseInt(mostRecentItem.ttl.N ?? "0");
+      const currentTime = Math.floor(Date.now() / 1000);
 
-      // Si existe el item, todos los campos están presentes (garantizado por save)
+      // Validar TTL en memoria después de obtener el dato más reciente
+      if (ttl <= currentTime) {
+        console.log(
+          `🔍 Cache MISS - Datos más recientes encontrados pero TTL expirado (TTL: ${ttl}, Actual: ${currentTime})`
+        );
+        return null;
+      }
+
+      console.log(
+        `✅ Cache HIT - Datos fusionados más recientes válidos (TTL restante: ${ttl - currentTime}s)`
+      );
+
       const cacheData: CacheSchema = {
-        id: item.id.S!,
-        fechaCreacion: item.fechaCreacion.S!,
-        personas: JSON.parse(item.personas.S!) as IPerson[],
-        ttl: parseInt(item.ttl.N!),
+        id: mostRecentItem.id.S ?? "",
+        fechaCreacion: mostRecentItem.fechaCreacion.S ?? "",
+        personas: JSON.parse(mostRecentItem.personas.S ?? "[]"),
+        ttl,
       };
 
       return cacheData;

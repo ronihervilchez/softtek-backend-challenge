@@ -19,6 +19,10 @@ export class SofttekBackendStack extends cdk.Stack {
         name: "id",
         type: dynamodb.AttributeType.STRING,
       },
+      sortKey: {
+        name: "fechaCreacion",
+        type: dynamodb.AttributeType.STRING,
+      },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Para POC
       timeToLiveAttribute: "ttl",
@@ -29,6 +33,10 @@ export class SofttekBackendStack extends cdk.Stack {
       tableName: "softtek-data",
       partitionKey: {
         name: "id",
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: "fechaCreacion",
         type: dynamodb.AttributeType.STRING,
       },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
@@ -46,19 +54,6 @@ export class SofttekBackendStack extends cdk.Stack {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY, // Para POC
       pointInTimeRecovery: true,
-    });
-
-    // Global Secondary Index para categoría y fecha en la tabla de datos
-    dataTable.addGlobalSecondaryIndex({
-      indexName: "categoria-fecha-index",
-      partitionKey: {
-        name: "categoria",
-        type: dynamodb.AttributeType.STRING,
-      },
-      sortKey: {
-        name: "fechaCreacion",
-        type: dynamodb.AttributeType.STRING,
-      },
     });
 
     // Cognito User Pool
@@ -103,18 +98,16 @@ export class SofttekBackendStack extends cdk.Stack {
         custom: true,
       },
       supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
-      readAttributes: new cognito.ClientAttributes()
-        .withStandardAttributes({
-          email: true,
-          givenName: true,
-          familyName: true,
-        }),
-      writeAttributes: new cognito.ClientAttributes()
-        .withStandardAttributes({
-          email: true,
-          givenName: true,
-          familyName: true,
-        }),
+      readAttributes: new cognito.ClientAttributes().withStandardAttributes({
+        email: true,
+        givenName: true,
+        familyName: true,
+      }),
+      writeAttributes: new cognito.ClientAttributes().withStandardAttributes({
+        email: true,
+        givenName: true,
+        familyName: true,
+      }),
       accessTokenValidity: cdk.Duration.minutes(60),
       idTokenValidity: cdk.Duration.minutes(60),
       refreshTokenValidity: cdk.Duration.days(30),
@@ -131,7 +124,7 @@ export class SofttekBackendStack extends cdk.Stack {
         format: OutputFormat.CJS,
         externalModules: [
           // AWS SDK v3 está disponible en el runtime de Lambda
-          '@aws-sdk/*'
+          "@aws-sdk/*",
         ],
         forceDockerBundling: false, // Usar bundling local sin Docker
       },
@@ -211,7 +204,12 @@ export class SofttekBackendStack extends cdk.Stack {
     });
 
     // Dar permisos de DynamoDB a las funciones
-    const functionsNeedingDynamoDB = [fusionadosFunction, almacenarFunction, historialFunction, registroFunction];
+    const functionsNeedingDynamoDB = [
+      fusionadosFunction,
+      almacenarFunction,
+      historialFunction,
+      registroFunction,
+    ];
     functionsNeedingDynamoDB.forEach((func) => {
       cacheTable.grantReadWriteData(func); // Cache temporal
       dataTable.grantReadWriteData(func); // Historial de datos fusionados
@@ -219,32 +217,34 @@ export class SofttekBackendStack extends cdk.Stack {
     });
 
     // Dar permisos de Cognito a la función de registro
-    registroFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        "cognito-idp:AdminCreateUser",
-        "cognito-idp:AdminSetUserPassword",
-        "cognito-idp:AdminGetUser"
-      ],
-      resources: [userPool.userPoolArn]
-    }));
+    registroFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminSetUserPassword",
+          "cognito-idp:AdminGetUser",
+        ],
+        resources: [userPool.userPoolArn],
+      })
+    );
 
     // Dar permisos de Cognito a la función de login
-    loginFunction.addToRolePolicy(new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        "cognito-idp:InitiateAuth"
-      ],
-      resources: [userPool.userPoolArn]
-    }));
+    loginFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ["cognito-idp:InitiateAuth"],
+        resources: [userPool.userPoolArn],
+      })
+    );
 
     // Agregar variable de entorno del UserPoolClient a la función de login
-    loginFunction.addEnvironment('COGNITO_USER_POOL_CLIENT_ID', userPoolClient.userPoolClientId);
+    loginFunction.addEnvironment("COGNITO_USER_POOL_CLIENT_ID", userPoolClient.userPoolClientId);
 
     // Lambda Authorizer personalizado (reemplaza CognitoUserPoolsAuthorizer)
     const auth = new apigateway.TokenAuthorizer(this, "LambdaAuthorizer", {
       handler: authorizerFunction,
-      identitySource: apigateway.IdentitySource.header('Authorization'),
+      identitySource: apigateway.IdentitySource.header("Authorization"),
       authorizerName: "LambdaAuthorizer",
       resultsCacheTtl: cdk.Duration.minutes(5),
     });
