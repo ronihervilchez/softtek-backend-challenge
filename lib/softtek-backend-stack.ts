@@ -83,7 +83,7 @@ export class SofttekBackendStack extends cdk.Stack {
           required: true,
           mutable: true,
         },
-        fullname: {
+        givenName: {
           required: true,
           mutable: true,
         },
@@ -102,6 +102,19 @@ export class SofttekBackendStack extends cdk.Stack {
         userSrp: true,
         custom: true,
       },
+      supportedIdentityProviders: [cognito.UserPoolClientIdentityProvider.COGNITO],
+      readAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({
+          email: true,
+          givenName: true,
+          familyName: true,
+        }),
+      writeAttributes: new cognito.ClientAttributes()
+        .withStandardAttributes({
+          email: true,
+          givenName: true,
+          familyName: true,
+        }),
       accessTokenValidity: cdk.Duration.minutes(60),
       idTokenValidity: cdk.Duration.minutes(60),
       refreshTokenValidity: cdk.Duration.days(30),
@@ -127,6 +140,7 @@ export class SofttekBackendStack extends cdk.Stack {
         DYNAMODB_TABLE_DATA: dataTable.tableName, // softtek-data
         DYNAMODB_TABLE_USUARIOS: usuariosTable.tableName, // softtek-usuarios
         COGNITO_USER_POOL_ID: userPool.userPoolId,
+        COGNITO_USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
         NODE_ENV: "production",
         FREE_TIER_MODE: "true",
         CACHE_TTL_SECONDS: "1800",
@@ -201,7 +215,6 @@ export class SofttekBackendStack extends cdk.Stack {
       actions: [
         "cognito-idp:AdminCreateUser",
         "cognito-idp:AdminSetUserPassword",
-        "cognito-idp:AdminAddUserToGroup",
         "cognito-idp:AdminGetUser"
       ],
       resources: [userPool.userPoolArn]
@@ -218,6 +231,14 @@ export class SofttekBackendStack extends cdk.Stack {
 
     // Agregar variable de entorno del UserPoolClient a la función de login
     loginFunction.addEnvironment('COGNITO_USER_POOL_CLIENT_ID', userPoolClient.userPoolClientId);
+
+    // Cognito Authorizer
+    const auth = new apigateway.CognitoUserPoolsAuthorizer(this, "CognitoAuthorizer", {
+      cognitoUserPools: [userPool],
+      authorizerName: "CognitoAuthorizer",
+      identitySource: "method.request.header.Authorization",
+      resultsCacheTtl: cdk.Duration.minutes(5),
+    });
 
     // API Gateway
     const api = new apigateway.RestApi(this, "SofttekApi", {
@@ -239,13 +260,6 @@ export class SofttekBackendStack extends cdk.Stack {
         ],
         allowCredentials: true,
       },
-    });
-
-    // Cognito Authorizer
-    const auth = new apigateway.CognitoUserPoolsAuthorizer(this, "CognitoAuthorizer", {
-      cognitoUserPools: [userPool],
-      authorizerName: "CognitoAuthorizer",
-      identitySource: "method.request.header.Authorization",
     });
 
     // Endpoints públicos (sin autenticación)
