@@ -35,15 +35,26 @@ export class FusionadosServiceImpl implements FusionadosService {
         externalApiService.getOtherPeopleData(),
       ]);
 
+      // Validaciones defensivas
+      const safePeopleList = Array.isArray(peopleList) ? peopleList : [];
+      const safeFilms = Array.isArray(films) ? films : [];
+      const safeOtherPeopleData = Array.isArray(otherPeopleData) ? otherPeopleData : [];
+
       console.log(
-        `📊 Datos externos obtenidos - Personas SWAPI: ${peopleList.length}, Películas: ${films.length}, Otros datos: ${otherPeopleData.length}`
+        `📊 Datos externos obtenidos - Personas SWAPI: ${safePeopleList.length}, Películas: ${safeFilms.length}, Otros datos: ${safeOtherPeopleData.length}`
       );
+
+      // Si no hay datos de personas principales, retornar array vacío
+      if (safePeopleList.length === 0) {
+        console.warn("⚠️ No se obtuvieron datos de personas principales, retornando array vacío");
+        return [];
+      }
 
       // Crear Maps para búsquedas optimizadas O(1) en lugar de O(n)
       console.log("🗺️ Creando Maps para optimización de búsquedas...");
 
       const otherPeopleMap = new Map<string, IOtherExternalPersonData>();
-      otherPeopleData.forEach(person => {
+      safeOtherPeopleData.forEach(person => {
         const key = person.name?.toLowerCase().trim();
         if (key) {
           otherPeopleMap.set(key, person);
@@ -51,22 +62,24 @@ export class FusionadosServiceImpl implements FusionadosService {
       });
 
       const filmsMap = new Map<string, string>();
-      films.forEach(film => {
+      safeFilms.forEach(film => {
         if (film.url && film.title) {
           filmsMap.set(film.url, film.title);
         }
       });
 
       // Fusionar los datos para crear el arreglo de IPerson
-      const fusionedData: IPerson[] = peopleList.map((person) => {
+      const fusionedData: IPerson[] = safePeopleList.map((person) => {
         // Buscar datos adicionales usando el Map (O(1))
         const personKey = person.name?.toLowerCase().trim();
         const otherData = otherPeopleMap.get(personKey);
 
         // Obtener las películas en las que aparece usando el Map (O(1))
-        const personFilms: string[] = person.films
-          .map(filmUrl => filmsMap.get(filmUrl))
-          .filter((title): title is string => title !== undefined);
+        const personFilms: string[] = Array.isArray(person.films) 
+          ? person.films
+              .map(filmUrl => filmsMap.get(filmUrl))
+              .filter((title): title is string => title !== undefined)
+          : [];
 
         // Crear el objeto IPerson fusionado
         let masters: string[] = [];

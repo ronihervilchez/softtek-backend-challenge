@@ -1,5 +1,5 @@
-import { IExternalPerson, IOtherExternalPersonData } from "./interfaces/people.interface";
 import { IFilm } from "./interfaces/film.interface";
+import { IExternalPerson, IOtherExternalPersonData } from "./interfaces/people.interface";
 import { Response } from "./interfaces/response.interface";
 
 // Interfaz para los datos de la API de Star Wars adicional
@@ -33,13 +33,21 @@ export class ExternalApiServiceImpl implements ExternalApiService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const json = (await response.json()) as Response<IExternalPerson>;
+      const data = (await response.json()) as Response<IExternalPerson>;
 
-      console.log(`✅ API externa respondió: ${json.results.length} personas obtenidas`);
-      return json.results;
+      // Validación defensiva
+      if (!Array.isArray(data)) {
+        console.warn("⚠️ API de personas retornó estructura inválida, usando array vacío");
+        return [];
+      }
+
+      console.log(`✅ API externa respondió: ${data.length} personas obtenidas`);
+      return data;
     } catch (error) {
       console.error("❌ Error al consultar API externa de personas:", error);
-      throw new Error(`Error en getPeopleList: ${error}`);
+      // Retornar array vacío en lugar de fallar
+      console.warn("⚠️ Retornando array vacío para personas debido al error");
+      return [];
     }
   }
 
@@ -56,13 +64,21 @@ export class ExternalApiServiceImpl implements ExternalApiService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const json = (await response.json()) as Response<IFilm>;
+      const data = (await response.json()) as IFilm[];
 
-      console.log(`✅ API externa respondió: ${json.results.length} películas obtenidas`);
-      return json.results;
+      // Validación defensiva
+      if (!Array.isArray(data)) {
+        console.warn("⚠️ API de películas retornó estructura inválida, usando array vacío");
+        return [];
+      }
+
+      console.log(`✅ API externa respondió: ${data.length} películas obtenidas`);
+      return data;
     } catch (error) {
       console.error("❌ Error al consultar API externa de películas:", error);
-      throw new Error(`Error en getFilms: ${error}`);
+      // Retornar array vacío en lugar de fallar
+      console.warn("⚠️ Retornando array vacío para películas debido al error");
+      return [];
     }
   }
 
@@ -81,11 +97,19 @@ export class ExternalApiServiceImpl implements ExternalApiService {
 
       const data = (await response.json()) as IOtherExternalPersonData[];
 
+      // Validación defensiva
+      if (!Array.isArray(data)) {
+        console.warn("⚠️ API de otros datos retornó estructura inválida, usando array vacío");
+        return [];
+      }
+
       console.log(`✅ API externa respondió: ${data.length} registros de personas obtenidos`);
       return data;
     } catch (error) {
       console.error("❌ Error al consultar API externa de otros datos de personas:", error);
-      throw new Error(`Error en getOtherPeopleData: ${error}`);
+      // Retornar array vacío en lugar de fallar
+      console.warn("⚠️ Retornando array vacío para otros datos debido al error");
+      return [];
     }
   }
 }
