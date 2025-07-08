@@ -31,8 +31,7 @@ export class UsuarioRegistroServiceImpl implements UsuarioRegistroService {
       const cognitoResult = await this.cognitoUserManager.createUser(
         data.email,
         `${data.nombres} ${data.apellidos}`,
-        data.password,
-        ['users'] // Grupo por defecto
+        data.password
       );
 
       // 2. Crear datos para DynamoDB
