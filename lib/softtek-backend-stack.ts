@@ -107,17 +107,10 @@ export class SofttekBackendStack extends cdk.Stack {
       preventUserExistenceErrors: true,
     });
 
-    // Lambda Layer para dependencias comunes
-    const commonLayer = new lambda.LayerVersion(this, "CommonLayer", {
-      code: lambda.Code.fromAsset("./dist"),
-      compatibleRuntimes: [lambda.Runtime.NODEJS_20_X],
-      description: "Common dependencies for Softtek Backend Challenge",
-    });
-
     // Configuración común para todas las Lambdas
     const commonLambdaProps = {
       runtime: lambda.Runtime.NODEJS_20_X,
-      layers: [commonLayer],
+      // Removido layers - las dependencias están incluidas en dist-complete
       environment: {
         DYNAMODB_TABLE_CACHE: cacheTable.tableName, // softtek-cache
         DYNAMODB_TABLE_DATA: dataTable.tableName, // softtek-data
@@ -136,7 +129,7 @@ export class SofttekBackendStack extends cdk.Stack {
     const healthFunction = new lambda.Function(this, "HealthFunction", {
       ...commonLambdaProps,
       functionName: "softtek-health",
-      code: lambda.Code.fromAsset("./dist"),
+      code: lambda.Code.fromAsset("./dist-complete"),
       handler: "handlers/health.handler",
       description: "Health check endpoint",
     });
@@ -144,7 +137,7 @@ export class SofttekBackendStack extends cdk.Stack {
     const swaggerFunction = new lambda.Function(this, "SwaggerFunction", {
       ...commonLambdaProps,
       functionName: "softtek-swagger",
-      code: lambda.Code.fromAsset("./dist"),
+      code: lambda.Code.fromAsset("./dist-complete"),
       handler: "handlers/swagger.handler",
       description: "Swagger UI documentation endpoint",
     });
@@ -153,7 +146,7 @@ export class SofttekBackendStack extends cdk.Stack {
     const fusionadosFunction = new lambda.Function(this, "FusionadosFunction", {
       ...commonLambdaProps,
       functionName: "softtek-fusionados",
-      code: lambda.Code.fromAsset("./dist"),
+      code: lambda.Code.fromAsset("./dist-complete"),
       handler: "modules/fusionados/controllers/fusionados.controller.handler",
       description: "Obtener datos fusionados con APIs externas",
     });
@@ -161,7 +154,7 @@ export class SofttekBackendStack extends cdk.Stack {
     const almacenarFunction = new lambda.Function(this, "AlmacenarFunction", {
       ...commonLambdaProps,
       functionName: "softtek-almacenar",
-      code: lambda.Code.fromAsset("./dist"),
+      code: lambda.Code.fromAsset("./dist-complete"),
       handler: "modules/almacenar/controllers/almacenar.controller.handler",
       description: "Almacenar datos con integración externa",
     });
@@ -169,7 +162,7 @@ export class SofttekBackendStack extends cdk.Stack {
     const historialFunction = new lambda.Function(this, "HistorialFunction", {
       ...commonLambdaProps,
       functionName: "softtek-historial",
-      code: lambda.Code.fromAsset("./dist"),
+      code: lambda.Code.fromAsset("./dist-complete"),
       handler: "modules/historial/controllers/historial.controller.handler",
       description: "Obtener historial con integración externa",
     });
@@ -177,7 +170,7 @@ export class SofttekBackendStack extends cdk.Stack {
     const registroFunction = new lambda.Function(this, "RegistroFunction", {
       ...commonLambdaProps,
       functionName: "softtek-registro",
-      code: lambda.Code.fromAsset("./dist"),
+      code: lambda.Code.fromAsset("./dist-complete"),
       handler: "modules/usuario-registro/controllers/usuario-registro.controller.handler",
       description: "Registro público de usuarios en Cognito y DynamoDB",
     });
@@ -185,7 +178,7 @@ export class SofttekBackendStack extends cdk.Stack {
     const loginFunction = new lambda.Function(this, "LoginFunction", {
       ...commonLambdaProps,
       functionName: "softtek-login",
-      code: lambda.Code.fromAsset("./dist"),
+      code: lambda.Code.fromAsset("./dist-complete"),
       handler: "modules/usuario-login/controllers/usuario-login.controller.handler",
       description: "Login público de usuarios para obtener JWT token",
     });

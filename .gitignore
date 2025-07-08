@@ -37,6 +37,7 @@ cdk.out/
 
 # TypeScript
 dist/
+dist-complete/
 *.tsbuildinfo
 
 # AWS
