@@ -1,9 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
 import { IPerson } from "../../../interfaces/fusionado.interface";
 import { getCacheService } from "../../database/services/cache.service";
-import { getHistorialService } from "../../historial/services/historial.service";
 import { externalApiService } from "../../external-services/external-api.service";
 import { IOtherExternalPersonData } from "../../external-services/interfaces/people.interface";
+import { getHistorialService } from "../../historial/services/historial.service";
 
 export interface FusionadosService {
   getFusionados(filters?: Record<string, any>): Promise<IPerson[]>;
@@ -54,7 +54,7 @@ export class FusionadosServiceImpl implements FusionadosService {
       console.log("🗺️ Creando Maps para optimización de búsquedas...");
 
       const otherPeopleMap = new Map<string, IOtherExternalPersonData>();
-      safeOtherPeopleData.forEach(person => {
+      safeOtherPeopleData.forEach((person) => {
         const key = person.name?.toLowerCase().trim();
         if (key) {
           otherPeopleMap.set(key, person);
@@ -62,7 +62,7 @@ export class FusionadosServiceImpl implements FusionadosService {
       });
 
       const filmsMap = new Map<string, string>();
-      safeFilms.forEach(film => {
+      safeFilms.forEach((film) => {
         if (film.url && film.title) {
           filmsMap.set(film.url, film.title);
         }
@@ -75,9 +75,9 @@ export class FusionadosServiceImpl implements FusionadosService {
         const otherData = otherPeopleMap.get(personKey);
 
         // Obtener las películas en las que aparece usando el Map (O(1))
-        const personFilms: string[] = Array.isArray(person.films) 
+        const personFilms: string[] = Array.isArray(person.films)
           ? person.films
-              .map(filmUrl => filmsMap.get(filmUrl))
+              .map((filmUrl) => filmsMap.get(filmUrl))
               .filter((title): title is string => title !== undefined)
           : [];
 
@@ -102,10 +102,7 @@ export class FusionadosServiceImpl implements FusionadosService {
           altura: parseInt(person.height) || 0,
           peso: parseInt(person.mass) || 0,
           genero: person.gender,
-          especie:
-            Array.isArray(person.species) && person.species.length > 0
-              ? person.species[0]
-              : otherData?.species ?? "Desconocida",
+          especie: otherData?.species ?? "Desconocida",
           died: otherData?.died,
           planeta: Array.isArray(otherData?.homeworld)
             ? otherData.homeworld[0]
