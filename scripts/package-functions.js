@@ -58,17 +58,7 @@ staticFiles.forEach(({ src, dest }) => {
 });
 
 // Copiar dependencias específicas de node_modules
-const requiredModules = [
-  '@aws-sdk/client-cognito-identity-provider',
-  '@aws-sdk/client-dynamodb',
-  '@aws-sdk/lib-dynamodb',
-  'axios',
-  'class-validator',
-  'class-transformer',
-  'reflect-metadata',
-  'yamljs',
-  'uuid'
-];
+console.log('📦 Copiando dependencias necesarias...');
 
 const nodeModulesSource = 'node_modules';
 const nodeModulesDest = 'dist-complete/node_modules';
@@ -76,12 +66,21 @@ const nodeModulesDest = 'dist-complete/node_modules';
 if (fs.existsSync(nodeModulesSource)) {
   fs.mkdirSync(nodeModulesDest, { recursive: true });
   
-  console.log('📦 Copiando dependencias necesarias...');
+  // Módulos específicos que sabemos que necesitamos
+  const specificModules = [
+    'axios',
+    'class-validator',
+    'class-transformer',
+    'reflect-metadata',
+    'yamljs',
+    'uuid'
+  ];
   
   let copiedCount = 0;
   let notFoundCount = 0;
   
-  requiredModules.forEach(moduleName => {
+  // Copiar módulos específicos
+  specificModules.forEach(moduleName => {
     const sourcePath = path.join(nodeModulesSource, moduleName);
     const destPath = path.join(nodeModulesDest, moduleName);
     
@@ -94,6 +93,42 @@ if (fs.existsSync(nodeModulesSource)) {
       notFoundCount++;
     }
   });
+  
+  // Copiar TODOS los módulos @aws-sdk y @smithy
+  const nodeModulesDirs = fs.readdirSync(nodeModulesSource, { withFileTypes: true });
+  
+  nodeModulesDirs.forEach(entry => {
+    if (entry.isDirectory()) {
+      if (entry.name.startsWith('@aws-sdk') || entry.name.startsWith('@smithy')) {
+        const sourcePath = path.join(nodeModulesSource, entry.name);
+        const destPath = path.join(nodeModulesDest, entry.name);
+        
+        copyDir(sourcePath, destPath);
+        console.log(`  ✅ ${entry.name}`);
+        copiedCount++;
+      }
+    }
+  });
+  
+  // También copiar el directorio @aws-sdk completo si existe
+  const awsSdkDir = path.join(nodeModulesSource, '@aws-sdk');
+  if (fs.existsSync(awsSdkDir)) {
+    const awsSdkDestDir = path.join(nodeModulesDest, '@aws-sdk');
+    if (!fs.existsSync(awsSdkDestDir)) {
+      copyDir(awsSdkDir, awsSdkDestDir);
+      console.log(`  ✅ @aws-sdk/* (directorio completo)`);
+    }
+  }
+  
+  // También copiar el directorio @smithy completo si existe
+  const smithyDir = path.join(nodeModulesSource, '@smithy');
+  if (fs.existsSync(smithyDir)) {
+    const smithyDestDir = path.join(nodeModulesDest, '@smithy');
+    if (!fs.existsSync(smithyDestDir)) {
+      copyDir(smithyDir, smithyDestDir);
+      console.log(`  ✅ @smithy/* (directorio completo)`);
+    }
+  }
   
   console.log(`📊 Dependencias copiadas: ${copiedCount}, no encontradas: ${notFoundCount}`);
 } else {
