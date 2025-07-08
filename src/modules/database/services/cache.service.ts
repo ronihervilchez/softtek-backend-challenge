@@ -1,11 +1,12 @@
 import { DynamoDBClient, ScanCommand, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { CacheSchema } from "../schemas";
 import { IPerson } from "../../../interfaces/fusionado.interface";
+import { ICacheService } from "../interfaces";
 
 /**
  * Servicio de cache para datos fusionados con TTL de 30 minutos
  */
-export class CacheService {
+export class CacheService implements ICacheService {
   private readonly dynamoClient: DynamoDBClient;
   private readonly tableName: string;
   private readonly TTL_SECONDS = 1800; // 30 minutos
