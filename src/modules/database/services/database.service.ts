@@ -18,12 +18,12 @@ import {
 import {
   DatabaseConfig,
   DatabaseRecord,
-  DatabaseService,
+  IDatabaseService,
   QueryOptions,
   QueryResult,
 } from "../interfaces/database.interface";
 
-export class DynamoDBService implements DatabaseService {
+export class DynamoDBService implements IDatabaseService {
   private readonly dynamoClient: DynamoDBClient;
   private readonly tableName: string;
   private readonly indexName: string;

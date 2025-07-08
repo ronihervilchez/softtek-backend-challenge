@@ -1,6 +1,6 @@
 import { DynamoDBClient, PutItemCommand, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { IPerson } from "../../../interfaces/fusionado.interface";
-import { HistorialSchema } from "../../database/schemas";
+import { HistorialSchema } from "../../database/schemas/database.schemas";
 import { IHistoryList, IHistory } from "../../../interfaces/service.interface";
 
 /**

@@ -3,7 +3,7 @@ import { IPerson } from "../../../interfaces/fusionado.interface";
 import { getCacheService } from "../../database/services/cache.service";
 import { getHistorialService } from "../../historial/services/historial.service";
 import { externalApiService } from "../../external-services/external-api.service";
-import { IOtherExternalPersonData } from "../../external-services/interfaces";
+import { IOtherExternalPersonData } from "../../external-services/interfaces/people.interface";
 
 export interface FusionadosService {
   getFusionados(filters?: Record<string, any>): Promise<IPerson[]>;

@@ -4,18 +4,18 @@ import { IPerson } from "../../../interfaces/fusionado.interface";
  * Esquema para cache de datos fusionados
  */
 export interface CacheSchema {
-  id: string; // UUID
-  fechaCreacion: string; // ISO string
-  personas: IPerson[]; // Arreglo de personas fusionadas
-  ttl: number; // TTL en segundos Unix timestamp (30 minutos)
+  id: string;
+  fechaCreacion: string;
+  personas: IPerson[];
+  ttl: number;
 }
 
 /**
  * Esquema para datos almacenados del usuario
  */
 export interface UsuariosSchema {
-  usuario: string; // ID del usuario
-  fechaCreacion: string; // ISO string
+  usuario: string;
+  fechaCreacion: string;
   nombres: string;
   apellidos: string;
   fechaNacimiento: string;
@@ -26,9 +26,9 @@ export interface UsuariosSchema {
  * Esquema para historial
  */
 export interface HistorialSchema {
-  id: string; // UUID
-  fechaCreacion: string; // ISO string
-  personas: IPerson[]; // Arreglo de personas del historial
+  id: string;
+  fechaCreacion: string;
+  personas: IPerson[];
 }
 
 /**

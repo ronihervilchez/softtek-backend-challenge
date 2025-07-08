@@ -1,6 +1,6 @@
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { RegistroUsuarioDto } from '../dtos/registro.dto';
-import { UsuariosSchema } from '../../database/schemas';
+import { UsuariosSchema } from '../../database/schemas/database.schemas';
 import { CognitoUserManager } from '../../external-services/cognito-user-manager.service';
 
 export interface UsuarioRegistroService {

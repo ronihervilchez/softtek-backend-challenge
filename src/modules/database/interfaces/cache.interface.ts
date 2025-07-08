@@ -1,5 +1,5 @@
-import { IPerson } from "../../../interfaces";
-import { CacheSchema } from "../schemas";
+import { IPerson } from "../../../interfaces/fusionado.interface";
+import { CacheSchema } from "../schemas/database.schemas";
 
 export interface CacheItem<T = any> {
   key: string;

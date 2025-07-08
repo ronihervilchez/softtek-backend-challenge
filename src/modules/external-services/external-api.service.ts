@@ -1,4 +1,6 @@
-import { IExternalPerson, IFilm, IOtherExternalPersonData, Response } from "./interfaces";
+import { IExternalPerson, IOtherExternalPersonData } from "./interfaces/people.interface";
+import { IFilm } from "./interfaces/film.interface";
+import { Response } from "./interfaces/response.interface";
 
 // Interfaz para los datos de la API de Star Wars adicional
 

@@ -15,7 +15,7 @@ export interface DatabaseConnection {
   isConnected(): boolean;
 }
 
-export interface DatabaseService {
+export interface IDatabaseService {
   // Métodos CRUD básicos
   put(item: DatabaseRecord): Promise<DatabaseRecord>;
   get(id: string): Promise<DatabaseRecord | null>;
