@@ -304,7 +304,7 @@ export class SofttekBackendStack extends cdk.Stack {
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });
 
-    api.root.addResource("historial").addMethod("GET", historialIntegration, {
+    api.root.addResource("historial").addMethod("POST", historialIntegration, {
       authorizer: auth,
       authorizationType: apigateway.AuthorizationType.CUSTOM,
     });

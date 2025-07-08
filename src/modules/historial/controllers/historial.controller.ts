@@ -1,64 +1,83 @@
-import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { getHistorialService } from '../services/historial.service';
-import { ResponseUtil } from '../../../utils/response.util';
+import "reflect-metadata";
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from "aws-lambda";
+import { ResponseUtil } from "../../../utils/response.util";
+import { ValidationUtil } from "../../../utils/validation.util";
+import { HistorialDto } from "../dtos/historial.dto";
+import { getHistorialService } from "../services/historial.service";
 
 export class HistorialController {
   private readonly historialService = getHistorialService();
 
   async getHistorial(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     try {
-      console.log('📋 Obteniendo historial...');
-      
-      // Extraer y validar parámetros de query
-      const queryParams = event.queryStringParameters ?? {};
-      
-      // Validar y parsear limit con rangos razonables
-      let limit = 10; // Valor por defecto
-      if (queryParams.limit) {
-        const parsedLimit = parseInt(queryParams.limit);
-        if (isNaN(parsedLimit) || parsedLimit < 1) {
-          return ResponseUtil.lambdaResponse(400, ResponseUtil.error(
-            ['El parámetro limit debe ser un número entero mayor a 0'],
-            'Parámetro inválido'
-          ));
-        }
-        if (parsedLimit > 100) {
-          return ResponseUtil.lambdaResponse(400, ResponseUtil.error(
-            ['El parámetro limit no puede ser mayor a 100'],
-            'Parámetro inválido'
-          ));
-        }
-        limit = parsedLimit;
+      console.log("📋 Iniciando obtención de historial (POST)...");
+
+      // Extraer información del usuario autenticado desde Lambda Authorizer
+      const userInfo = event.requestContext.authorizer;
+      const userEmail = userInfo?.claims?.email ?? "unknown";
+      const userName = userInfo?.claims?.given_name ?? userInfo?.claims?.username ?? "unknown";
+
+      console.log(`👤 Usuario autenticado: ${userName} (${userEmail})`);
+
+      // Parsear y validar el body del POST
+      if (!event.body) {
+        return ResponseUtil.lambdaResponse(
+          400,
+          ResponseUtil.error(["El body de la petición es requerido"], "Body faltante")
+        );
       }
-      
-      const lastEvaluatedKey = queryParams.lastKey ? 
-        JSON.parse(decodeURIComponent(queryParams.lastKey)) : 
-        undefined;
-      
-      console.log(`📋 Consultando historial con limit: ${limit}`);
+
+      let requestData: any;
+      try {
+        requestData = JSON.parse(event.body);
+      } catch (parseError) {
+        console.error("❌ Error parseando body JSON:", parseError);
+        return ResponseUtil.lambdaResponse(
+          400,
+          ResponseUtil.error(["El body debe ser un JSON válido"], "JSON malformado")
+        );
+      }
+
+      // Validar DTO
+      const validation = await ValidationUtil.validateDto(HistorialDto, requestData);
+      if (!validation.isValid) {
+        return ResponseUtil.lambdaResponse(
+          400,
+          ResponseUtil.error(validation.errors, "Datos de entrada inválidos")
+        );
+      }
+
+      const { limit, lastEvaluatedKey } = validation.dto as HistorialDto;
+
+      console.log(`� Obteniendo historial para usuario: ${userEmail} (limit: ${limit})`);
       const data = await this.historialService.getHistorial(limit, lastEvaluatedKey);
-      
+
+      console.log(`✅ Historial obtenido: ${data.histories.length} elementos para usuario ${userEmail}`);
+
       // Preparar respuesta con información de paginación
-      const response = {
-        ...data,
-        // Si hay próxima página, incluir lastEvaluatedKey codificado para el cliente
-        nextPageToken: data.hasNextPage && data.lastEvaluatedKey ? 
-          encodeURIComponent(JSON.stringify(data.lastEvaluatedKey)) : 
-          undefined
+      const responseData: any = {
+        histories: data.histories,
+        hasNextPage: data.hasNextPage,
       };
-      
-      // Remover lastEvaluatedKey del response ya que usamos nextPageToken
-      delete response.lastEvaluatedKey;
-      
-      console.log(`✅ Historial obtenido exitosamente: ${data.histories.length} registros (limit solicitado: ${limit}), hasNextPage: ${data.hasNextPage}`);
-      
-      return ResponseUtil.lambdaResponse(200, ResponseUtil.success(response, 'Historial obtenido exitosamente'));
+
+      // Agregar información de paginación si hay más páginas
+      if (data.hasNextPage && data.lastEvaluatedKey) {
+        responseData.lastEvaluatedKey = data.lastEvaluatedKey; // Para próxima petición POST
+      }
+
+      return ResponseUtil.lambdaResponse(
+        200,
+        ResponseUtil.success(responseData, "Historial obtenido exitosamente")
+      );
     } catch (error) {
-      console.error('❌ Error al obtener historial:', error);
-      return ResponseUtil.lambdaResponse(500, ResponseUtil.error(
-        [error instanceof Error ? error.message : 'Error desconocido'],
-        'Error al obtener historial'
-      ));
+      console.error("❌ Error al obtener historial:", error);
+      return ResponseUtil.lambdaResponse(
+        500,
+        ResponseUtil.error(
+          [error instanceof Error ? error.message : "Error desconocido"],
+          "Error al obtener historial"
+        )
+      );
     }
   }
 }
@@ -67,6 +86,9 @@ export class HistorialController {
 const historialController = new HistorialController();
 
 // Handler para Lambda
-export const handler = async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
+export const handler = async (
+  event: APIGatewayProxyEvent,
+  context: Context
+): Promise<APIGatewayProxyResult> => {
   return historialController.getHistorial(event, context);
 };
