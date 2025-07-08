@@ -1,21 +1,67 @@
 import * as YAML from 'yamljs';
 import * as path from 'path';
+import * as fs from 'fs';
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 
-// Cargar el archivo swagger.yaml
-const swaggerDocument = YAML.load(path.join(__dirname, '../../swagger.yaml'));
+// Función para cargar el documento Swagger de forma lazy
+let swaggerDocument: any = null;
+
+function loadSwaggerDocument(): any {
+  if (swaggerDocument) {
+    return swaggerDocument;
+  }
+  
+  try {
+    // En el entorno Lambda, el archivo swagger.yaml está en la raíz del directorio de la función
+    const swaggerPath = path.join(__dirname, 'swagger.yaml');
+    
+    // Verificar si el archivo existe en la ubicación esperada
+    if (!fs.existsSync(swaggerPath)) {
+      // Si no existe, intentar con otras ubicaciones posibles
+      const alternativePaths = [
+        path.join(__dirname, '../swagger.yaml'),
+        path.join(__dirname, '../../swagger.yaml'),
+        path.join(process.cwd(), 'swagger.yaml')
+      ];
+      
+      let foundPath = null;
+      for (const altPath of alternativePaths) {
+        if (fs.existsSync(altPath)) {
+          foundPath = altPath;
+          break;
+        }
+      }
+      
+      if (!foundPath) {
+        throw new Error(`swagger.yaml not found. Searched paths: ${[swaggerPath, ...alternativePaths].join(', ')}`);
+      }
+      
+      swaggerDocument = YAML.load(foundPath);
+    } else {
+      swaggerDocument = YAML.load(swaggerPath);
+    }
+    
+    return swaggerDocument;
+  } catch (error) {
+    console.error('Error loading swagger.yaml:', error);
+    throw error;
+  }
+}
 
 export const handler = async (
   event: APIGatewayProxyEvent,
   context: Context
 ): Promise<APIGatewayProxyResult> => {
   try {
+    // Cargar el documento Swagger
+    const swaggerDoc = loadSwaggerDocument();
+    
     // Actualizar la URL del servidor basado en el entorno
     const region = process.env.AWS_REGION ?? 'us-east-1';
     const apiId = event.requestContext.apiId;
     
     // Actualizar servidores en el documento de Swagger
-    swaggerDocument.servers = [
+    swaggerDoc.servers = [
       {
         url: `https://${apiId}.execute-api.${region}.amazonaws.com`,
         description: 'API Gateway - Production environment'
@@ -53,7 +99,7 @@ export const handler = async (
             'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization'
           },
-          body: JSON.stringify(swaggerDocument, null, 2)
+          body: JSON.stringify(swaggerDoc, null, 2)
         };
 
       default:

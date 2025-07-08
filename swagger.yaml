@@ -506,161 +506,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /external/people:
-    get:
-      tags:
-        - APIs Externas
-      summary: Obtener personas (con caché)
-      description: Obtiene datos de personas de la API externa de Star Wars con caché de 30 minutos
-      responses:
-        '200':
-          description: Datos de personas obtenidos exitosamente
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Person'
-        '500':
-          description: Error interno del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+# Tags para organizar los endpoints
+tags:
+  - name: Health Check
+    description: Endpoints para verificar el estado del servicio
+  - name: Datos Fusionados
+    description: Endpoints para obtener datos fusionados de múltiples fuentes
+  - name: Almacenamiento
+    description: Endpoints para almacenar datos en la base de datos
+  - name: Historial
+    description: Endpoints para obtener el historial de operaciones
 
-  /external/people/no-cache:
-    get:
-      tags:
-        - APIs Externas
-      summary: Obtener personas (sin caché)
-      description: Obtiene datos de personas de la API externa de Star Wars sin usar caché
-      responses:
-        '200':
-          description: Datos de personas obtenidos exitosamente
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Person'
-        '500':
-          description: Error interno del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /external/planets:
-    get:
-      tags:
-        - APIs Externas
-      summary: Obtener planetas (con caché)
-      description: Obtiene datos de planetas de la API externa de Star Wars con caché de 30 minutos
-      responses:
-        '200':
-          description: Datos de planetas obtenidos exitosamente
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Planet'
-        '500':
-          description: Error interno del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /external/films:
-    get:
-      tags:
-        - APIs Externas
-      summary: Obtener películas (con caché)
-      description: Obtiene datos de películas de la API externa de Star Wars con caché de 30 minutos
-      responses:
-        '200':
-          description: Datos de películas obtenidos exitosamente
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/ApiResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Film'
-        '500':
-          description: Error interno del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /external/cache:
-    delete:
-      tags:
-        - Gestión de Caché
-      summary: Limpiar todo el caché
-      description: Elimina todos los datos del caché de APIs externas
-      responses:
-        '200':
-          description: Caché limpiado exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '500':
-          description: Error interno del servidor
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /external/cache/{endpoint}:
-    delete:
-      tags:
-        - Gestión de Caché
-      summary: Limpiar caché de endpoint específico
-      description: Elimina el caché de un endpoint específico
-      parameters:
-        - in: path
-          name: endpoint
-          required: true
-          schema:
-            type: string
-            enum: [people, planets, films]
-          description: Endpoint del cual limpiar el caché
-      responses:
-        '200':
-          description: Caché del endpoint limpiado exitosamente
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ApiResponse'
-        '400':
-          description: Endpoint inválido
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+# Información adicional
+externalDocs:
+  description: Documentación adicional en GitHub
+  url: https://github.com/softtek/backend-challenge
         '500':
           description: Error interno del servidor
           content:
@@ -678,10 +538,6 @@ tags:
     description: Endpoints para almacenar datos en la base de datos
   - name: Historial
     description: Endpoints para obtener el historial de operaciones
-  - name: APIs Externas
-    description: Endpoints para obtener datos de APIs externas (Star Wars API)
-  - name: Gestión de Caché
-    description: Endpoints para gestionar el caché de APIs externas
 
 # Información adicional
 externalDocs:

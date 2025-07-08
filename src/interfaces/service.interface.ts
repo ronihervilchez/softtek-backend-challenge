@@ -1,30 +1,13 @@
-export interface AlmacenarResult {
-  id: string;
-  nombre: string;
-  descripcion: string;
-  datos?: Record<string, any>;
-  tags?: string[];
-  categoria: string;
-  usuario?: string;
-  procesado: boolean;
-  fechaProcesamiento: string;
-  fechaCreacion: string;
-  timestamp?: number;
+import { IPerson } from "./fusionado.interface";
+
+export interface IHistoryList {
+  histories: IHistory[];
+  hasNextPage: boolean;
+  lastEvaluatedKey?: Record<string, any>; // Para paginación de DynamoDB
 }
 
-export interface FusionadosResult {
-  id: string;
-  data: any;
-  procesado: boolean;
-  timestamp: string;
-}
-
-export interface HistorialResult {
-  id: number;
-  accion: string;
-  usuario: string;
-  fecha: string;
-  fechaFormateada: string;
-  detalles: Record<string, any>;
-  procesado: boolean;
+export interface IHistory {
+  id?: string | number;
+  fechaCreacion?: string;
+  personas: IPerson[];
 }

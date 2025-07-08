@@ -1,4 +1,4 @@
-import { ApiResponse, ResponseBody } from '../interfaces';
+import { ApiResponse, ResponseBody } from '../interfaces/response.interface';
 
 export class ResponseUtil {
   static success<T>(data: T, message?: string): ResponseBody<T> {

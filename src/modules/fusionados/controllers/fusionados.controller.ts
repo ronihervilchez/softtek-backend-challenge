@@ -1,6 +1,6 @@
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { FusionadosService, FusionadosServiceImpl } from '../services/fusionados.service';
 import { ResponseUtil } from '../../../utils/response.util';
-import { ApiResponse, FusionadosResult } from '../../../interfaces';
 
 export class FusionadosController {
   private readonly fusionadosService: FusionadosService;
@@ -9,28 +9,39 @@ export class FusionadosController {
     this.fusionadosService = fusionadosService || new FusionadosServiceImpl();
   }
 
-  async getFusionados(event: any): Promise<ApiResponse<FusionadosResult[]>> {
+  async getFusionados(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
     try {
+      console.log('🔄 Iniciando proceso de fusión de datos...');
+
+      // Extraer información del usuario autenticado desde Lambda Authorizer
+      const userInfo = event.requestContext.authorizer;
+      const userEmail = userInfo?.email ?? 'unknown';
+      const userName = userInfo?.username ?? 'unknown';
+
+      console.log(`👤 Usuario autenticado: ${userName} (${userEmail})`);
+
       // Extraer filtros de query parameters si existen
       const filters = event.queryStringParameters ?? {};
-      
+
       const data = await this.fusionadosService.getFusionados(filters);
-      
-      const response = ResponseUtil.success(data, 'Datos fusionados obtenidos exitosamente');
-      return ResponseUtil.lambdaResponse(200, response);
+
+      console.log(`✅ Datos fusionados obtenidos: ${data.length} elementos para usuario ${userEmail}`);
+
+      return ResponseUtil.lambdaResponse(200, ResponseUtil.success(data, 'Datos fusionados obtenidos exitosamente'));
     } catch (error) {
-      const errorResponse = ResponseUtil.error(
+      console.error('❌ Error al obtener datos fusionados:', error);
+      return ResponseUtil.lambdaResponse(500, ResponseUtil.error(
         [error instanceof Error ? error.message : 'Error desconocido'],
         'Error al obtener datos fusionados'
-      );
-      return ResponseUtil.lambdaResponse(500, errorResponse);
+      ));
     }
   }
 }
 
-// Función handler unificada para Lambda
+// Instancia del controlador
 const fusionadosController = new FusionadosController();
 
-export const handler = async (event: any, context: any): Promise<ApiResponse<FusionadosResult[]>> => {
-  return fusionadosController.getFusionados(event);
+// Handler para Lambda
+export const handler = async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
+  return fusionadosController.getFusionados(event, context);
 };

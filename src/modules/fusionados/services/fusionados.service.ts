@@ -1,89 +1,162 @@
-import { FusionadosRepository, FusionadosRepositoryImpl } from '../../../repositories/fusionados.repository';
-import { FusionadosResult } from '../../../interfaces';
-import { FusionadosSchema } from '../../../modules/database/schemas';
+import { v4 as uuidv4 } from "uuid";
+import { IPerson } from "../../../interfaces/fusionado.interface";
+import { getCacheService } from "../../database/services/cache.service";
+import { externalApiService } from "../../external-services/external-api.service";
+import { IOtherExternalPersonData } from "../../external-services/interfaces/people.interface";
+import { getHistorialService } from "../../historial/services/historial.service";
 
 export interface FusionadosService {
-  getFusionados(filters?: Record<string, any>): Promise<FusionadosResult[]>;
-  createFusionados(personas: any[], planetas: any[], peliculas: any[], usuario: string): Promise<FusionadosSchema>;
-  getFusionadosById(id: string): Promise<FusionadosSchema | null>;
+  getFusionados(filters?: Record<string, any>): Promise<IPerson[]>;
 }
 
 export class FusionadosServiceImpl implements FusionadosService {
-  private readonly fusionadosRepository: FusionadosRepository;
+  private readonly cacheService = getCacheService();
+  private readonly historialService = getHistorialService();
 
-  constructor(fusionadosRepository?: FusionadosRepository) {
-    this.fusionadosRepository = fusionadosRepository || new FusionadosRepositoryImpl();
-  }
-
-  async getFusionados(filters?: Record<string, any>): Promise<FusionadosResult[]> {
+  async getFusionados(filters?: Record<string, any>): Promise<IPerson[]> {
     try {
-      // Convertir filtros genéricos a filtros específicos
-      const specificFilters = {
-        categoria: 'fusionados',
-        fechaInicio: filters?.fechaInicio,
-        fechaFin: filters?.fechaFin,
-        limit: filters?.limit
-      };
+      console.log("🔄 Obteniendo datos fusionados...");
 
-      const data = await this.fusionadosRepository.getFusionados(specificFilters);
-      
-      // Transformar datos del esquema a formato de resultado
-      return data.map((item) => ({
-        id: item.id,
-        data: {
-          id: item.id,
-          nombre: item.nombre,
-          fecha: item.fechaCreacion,
-          datos: item.datos,
-          usuario: item.usuario,
-          procesado: item.procesado,
-          timestamp: item.timestamp
-        },
-        procesado: item.procesado,
-        timestamp: item.fechaCreacion,
-      }));
+      // Verificar si los datos están en cache
+      const cachedData = await this.cacheService.findFusionados();
+      if (cachedData) {
+        console.log(
+          `📋 Datos obtenidos desde cache (ID: ${cachedData.id}, creado: ${cachedData.fechaCreacion})`
+        );
+        return this.applyFilters(cachedData.personas, filters);
+      }
+
+      console.log("🌐 Cache miss - obteniendo datos desde APIs externas...");
+
+      // Obtener datos de las 3 APIs externas en paralelo
+      const [peopleList, films, otherPeopleData] = await Promise.all([
+        externalApiService.getPeopleList(),
+        externalApiService.getFilms(),
+        externalApiService.getOtherPeopleData(),
+      ]);
+
+      // Validaciones defensivas
+      const safePeopleList = Array.isArray(peopleList) ? peopleList : [];
+      const safeFilms = Array.isArray(films) ? films : [];
+      const safeOtherPeopleData = Array.isArray(otherPeopleData) ? otherPeopleData : [];
+
+      console.log(
+        `📊 Datos externos obtenidos - Personas SWAPI: ${safePeopleList.length}, Películas: ${safeFilms.length}, Otros datos: ${safeOtherPeopleData.length}`
+      );
+
+      // Si no hay datos de personas principales, retornar array vacío
+      if (safePeopleList.length === 0) {
+        console.warn("⚠️ No se obtuvieron datos de personas principales, retornando array vacío");
+        return [];
+      }
+
+      // Crear Maps para búsquedas optimizadas O(1) en lugar de O(n)
+      console.log("🗺️ Creando Maps para optimización de búsquedas...");
+
+      const otherPeopleMap = new Map<string, IOtherExternalPersonData>();
+      safeOtherPeopleData.forEach((person) => {
+        const key = person.name?.toLowerCase().trim();
+        if (key) {
+          otherPeopleMap.set(key, person);
+        }
+      });
+
+      const filmsMap = new Map<string, string>();
+      safeFilms.forEach((film) => {
+        if (film.url && film.title) {
+          filmsMap.set(film.url, film.title);
+        }
+      });
+
+      // Fusionar los datos para crear el arreglo de IPerson
+      const fusionedData: IPerson[] = safePeopleList.map((person) => {
+        // Buscar datos adicionales usando el Map (O(1))
+        const personKey = person.name?.toLowerCase().trim();
+        const otherData = otherPeopleMap.get(personKey);
+
+        // Obtener las películas en las que aparece usando el Map (O(1))
+        const personFilms: string[] = Array.isArray(person.films)
+          ? person.films
+              .map((filmUrl) => filmsMap.get(filmUrl))
+              .filter((title): title is string => title !== undefined)
+          : [];
+
+        // Crear el objeto IPerson fusionado
+        let masters: string[] = [];
+        if (Array.isArray(otherData?.masters)) {
+          masters = otherData.masters;
+        } else if (otherData?.masters) {
+          masters = [otherData.masters];
+        }
+
+        let apprentices: string[] = [];
+        if (Array.isArray(otherData?.apprentices)) {
+          apprentices = otherData.apprentices;
+        } else if (otherData?.apprentices) {
+          apprentices = [otherData.apprentices];
+        }
+
+        const fusionedPerson: IPerson = {
+          id: otherData?.id,
+          nombre: person.name,
+          altura: parseInt(person.height) || 0,
+          peso: parseInt(person.mass) || 0,
+          genero: person.gender,
+          especie: otherData?.species ?? "Desconocida",
+          died: otherData?.died,
+          planeta: Array.isArray(otherData?.homeworld)
+            ? otherData.homeworld[0]
+            : otherData?.homeworld ?? "Desconocido",
+          peliculas: personFilms,
+          maestros: masters,
+          aprendices: apprentices,
+          imagen: otherData?.image ?? "",
+        };
+
+        return fusionedPerson;
+      });
+
+      // Generar ID único para cache e historial
+      const uniqueId = uuidv4();
+
+      // Guardar en cache (datos temporales con TTL)
+      await this.cacheService.saveFusionados(uniqueId, fusionedData);
+
+      // Guardar en historial (datos persistentes) - solo cuando se obtienen de APIs externas
+      await this.historialService.saveHistorial(uniqueId, fusionedData);
+
+      console.log(`✅ Datos fusionados procesados: ${fusionedData.length} personas`);
+      console.log(`💾 Guardado en cache y historial con ID: ${uniqueId}`);
+
+      return this.applyFilters(fusionedData, filters);
     } catch (error) {
       console.error(`❌ Error en el servicio de fusionados:`, error);
       throw new Error(`Error en el servicio de fusionados: ${error}`);
     }
   }
 
-  async createFusionados(
-    personas: any[], 
-    planetas: any[], 
-    peliculas: any[], 
-    usuario: string
-  ): Promise<FusionadosSchema> {
-    try {
-      const fusionadosRecord = await this.fusionadosRepository.createFusionados(
-        personas, 
-        planetas, 
-        peliculas, 
-        usuario
+  private applyFilters(data: IPerson[], filters?: Record<string, any>): IPerson[] {
+    let filteredData = data;
+
+    if (filters?.limit) {
+      filteredData = data.slice(0, parseInt(filters.limit));
+    }
+
+    if (filters?.genero) {
+      filteredData = filteredData.filter((person) =>
+        person.genero.toLowerCase().includes(filters.genero.toLowerCase())
       );
-
-      console.log(`✅ Fusionados creados en servicio: ${fusionadosRecord.id}`);
-      return fusionadosRecord;
-    } catch (error) {
-      console.error(`❌ Error al crear fusionados en servicio:`, error);
-      throw new Error(`Error al crear fusionados: ${error}`);
     }
-  }
 
-  async getFusionadosById(id: string): Promise<FusionadosSchema | null> {
-    try {
-      const record = await this.fusionadosRepository.getFusionadosById(id);
-      
-      if (record) {
-        console.log(`📖 Fusionados obtenidos por ID en servicio: ${id}`);
-      } else {
-        console.log(`⚠️ No se encontraron fusionados con ID: ${id}`);
-      }
-      
-      return record;
-    } catch (error) {
-      console.error(`❌ Error al obtener fusionados por ID en servicio:`, error);
-      throw new Error(`Error al obtener fusionados: ${error}`);
+    if (filters?.especie) {
+      filteredData = filteredData.filter((person) =>
+        person.especie.toLowerCase().includes(filters.especie.toLowerCase())
+      );
     }
+
+    return filteredData;
   }
 }
+
+// Exportar instancia singleton
+export const fusionadosService = new FusionadosServiceImpl();

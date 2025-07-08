@@ -32,12 +32,11 @@ before_script:
 
 deploy_lambda:
   stage: deploy
-  image: node:16
+  image: node:20
   script:
     - npm install
     - configure_environment $CI_COMMIT_REF_NAME
-    - node -e 'require("./src/utils/envs.util.js").updateVpcConfig()'
-    - npx serverless deploy --stage $STAGE
+    - npm run deploy --stage $STAGE
   only:
     - main
     - develop

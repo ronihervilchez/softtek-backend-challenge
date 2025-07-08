@@ -15,19 +15,19 @@ export interface DatabaseConnection {
   isConnected(): boolean;
 }
 
-export interface DatabaseService {
+export interface IDatabaseService {
   // Métodos CRUD básicos
   put(item: DatabaseRecord): Promise<DatabaseRecord>;
   get(id: string): Promise<DatabaseRecord | null>;
   query(categoria: string, fecha?: string): Promise<DatabaseRecord[]>;
   update(id: string, updates: Partial<DatabaseRecord>): Promise<DatabaseRecord>;
   delete(id: string): Promise<boolean>;
-  
+
   // Métodos de búsqueda avanzada
   findByCategory(categoria: string, limit?: number): Promise<DatabaseRecord[]>;
   findByDateRange(startDate: string, endDate: string): Promise<DatabaseRecord[]>;
   findByUser(usuario: string): Promise<DatabaseRecord[]>;
-  
+
   // Métodos de agregación
   countByCategory(categoria: string): Promise<number>;
   getLatestRecords(limit: number): Promise<DatabaseRecord[]>;

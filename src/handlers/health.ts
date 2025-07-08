@@ -1,5 +1,5 @@
 import { ResponseUtil } from '../utils/response.util';
-import { ApiResponse } from '../interfaces';
+import { ApiResponse } from '../interfaces/response.interface';
 
 export const handler = async (event: any, context: any): Promise<ApiResponse<any>> => {
   console.log('Health Check - Event:', JSON.stringify(event, null, 2));

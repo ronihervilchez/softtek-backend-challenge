@@ -16,7 +16,7 @@ export class FusionadosRepositoryImpl implements FusionadosRepository {
     try {
       // Aquí irían las consultas a la base de datos
       // Ejemplo: const result = await this.db.query('SELECT * FROM fusionados WHERE ...', filters);
-      
+
       return [
         {
           id: 1,

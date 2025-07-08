@@ -1,6 +1,6 @@
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
-import { ValidationResult } from '../interfaces';
+import { ValidationResult } from '../interfaces/response.interface';
 
 export class ValidationUtil {
   static async validateDto<T extends object>(
